@@ -55,17 +55,18 @@ with mp_hands.Hands(
     e_w, e_h = effect.shape[1], effect.shape[0]
     img_w, img_h = image.shape[1], image.shape[0]
 
-    annotated_image = image.copy()
     #%% 손등 위치 가져오기
     # 약지 시작부분 위치
     # FINGER=results.multi_hand_landmarks[0].landmark[mp_hands.HandLandmark.RING_FINGER_MCP]
     
+    annotated_image = image.copy()
     # 손목
     p=results.multi_hand_landmarks[0].landmark[mp_hands.HandLandmark.WRIST]
-    
+    h=100
+    w=30
     # 일부분 자르기 위한 좌표 얻기
-    x1,x2=int(p.x*image.shape[1]-e_w/2),int(p.x*image.shape[1]+e_w/2)
-    y1,y2=int(p.y*image.shape[0]-e_h/2),int(p.y*image.shape[0]+e_h/2)
+    x1,x2=int(p.x*image.shape[1]-e_w/2)-w,int(p.x*image.shape[1]+e_w/2)-w
+    y1,y2=int(p.y*image.shape[0]-e_h/2)-h,int(p.y*image.shape[0]+e_h/2)-h
     
     # 효과이미지 알파값 정규화해서 저장
     alpha=effect[:,:,3:]/255
