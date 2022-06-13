@@ -54,30 +54,5 @@ cnn.save('cnn_v2.h5')
 # 신경망 모델 정확률 평가
 res=cnn.evaluate(x_test,y_test,verbose=0)
 print("정확률은",res[1]*100)
-#%%
-import cv2 as cv
-from PIL import Image
-
-# 이미지 32x32으로 변경
-# img=Image.open('TestSample/7.jpg')
-# img=img.resize((28,28))
-# img=np.array(img)
-
-img =cv.imread('7.jpg',cv.IMREAD_GRAYSCALE)
-img=cv.resize(img, (28,28))
-img=img.astype('float32')
-img=img.reshape(1,28,28,1)
-               
-img=tf.keras.utils.normalize(img,axis=1)
-
-#%%
-model=load_model('../cnn_v2.h5')
-x=model.predict([img])
- 
-print(x)
-# cv.imshow('test',gray)
-
-# cv.waitKey()
-# cv.destroyAllWindows()
 
 
