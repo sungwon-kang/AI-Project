@@ -7,8 +7,12 @@ from matplotlib import pyplot as plt
 import cv2 as cv
     
 # 데이터 전처리
-def preprocessing(img):   
+def resize(img):
+    img=cv.resize(img, (28,28))
     img=img.astype(np.float32)
+    return img
+
+def preprocessing(img):    
     img=img.reshape(1,28,28,1)
     img=tf.keras.utils.normalize(img,axis=1)
     return img
@@ -23,22 +27,22 @@ se = np.uint8([[0,1,0],
                [1,1,1],
                [0,1,0]])
 
-# 색 반전해서 불러오기
-img = 255-cv.imread('./TestSample/8.jpg')
+img = cv.imread('./TestSample/9.jpg',cv.IMREAD_GRAYSCALE)
+img = resize(img)
 
-b_erosion = cv.erode(img,se,iterations=1)
+b_erosion = cv.erode(img,se,iterations=1) 
 
 show(img)
 show(b_erosion)
 
-# digit=preprocessing(img)
-# erosion=preprocessing(b_erosion)
+digit=preprocessing(img)
+erosion=preprocessing(b_erosion)
 
 #%%
 # 모델 로드
 model=load_model('./cnn_v2.h5')
-# x1=model.predict([digit])
-# x2=model.predict([erosion])
+x1=model.predict([digit])
+x2=model.predict([erosion])
 
 print(x1)
 print(x1.argmax())

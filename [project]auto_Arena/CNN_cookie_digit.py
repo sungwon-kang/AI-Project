@@ -15,8 +15,12 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0" # -1은 CPU, 나머지 번호는 GPU
 
 #%%
 
-imgs=[]
 x_train=np.array((10,28,28),dtype='float32')
+x_val=np.array((10,28,28),dtype='float32')
+
+def resize(img):
+    img=cv.resize(img, (28,28))
+    return img
 
 def preprocessing(img):
     se = np.uint8([[0,1,0],
@@ -35,25 +39,30 @@ def show(img):
 
 
 def load_imgs(path):
+    imgs=[]
     
     for i in os.listdir('./'+path+'/'):
         path = './'+path+'/'+i 
 
         img=cv.imread(path, cv.IMREAD_GRAYSCALE)
+        
+        show(img)
+        
         img=preprocessing(img)
         
         print(img.shape)
         imgs.append(img)
+        
+        
     
     return imgs
         
-
 
 #%%
 y_train=np.array([0,1,2,3,4,5,6,7,8,9])
 y_val=np.array([0,1,2,3,4,5,6,7,8,9])
 
-x_train=np.array(load_imgs('testSample'))
+x_train=np.array(load_imgs('trainSample'))
 x_val=np.array(load_imgs('valSample'))
 # 부류를 원핫코드로 변환
 y_train=tf.keras.utils.to_categorical(y_train,10)
