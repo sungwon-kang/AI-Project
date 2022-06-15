@@ -2,22 +2,27 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.keras.datasets as ds
 
-from tensorflow.keras.models import Sequential,load_model
+from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D,MaxPooling2D,Flatten,Dense,Dropout
 from tensorflow.keras.optimizers import Adam
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0" # -1은 CPU, 나머지 번호는 GPU
-#%%
+
 # MNIST 데이터셋을 읽고 신경망에 입력할 형태로 변환
 (x_train,y_train),(x_test,y_test)= ds.mnist.load_data()
 
+print(x_train.shape)
+
+#%%
 # 훈련 집합과 테스트 집합의 구조를 변환하고 정규화, 28x28x1 2차원 구조
 x_train=x_train.reshape(60000,28,28,1)
 x_test=x_test.reshape(10000,28,28,1)
 x_train=x_train.astype(np.float32)/255.0
 x_test=x_test.astype(np.float32)/255.0
 
+print(x_train.shape)
+#%%
 # 부류를 원핫코드로 변환
 y_train=tf.keras.utils.to_categorical(y_train,10)
 y_test=tf.keras.utils.to_categorical(y_test,10)
@@ -54,5 +59,57 @@ cnn.save('cnn_v2.h5')
 # 신경망 모델 정확률 평가
 res=cnn.evaluate(x_test,y_test,verbose=0)
 print("정확률은",res[1]*100)
+#%%
+import cv2 as cv
+from matplotlib import pyplot as plt
+
+
+
+def preprocessing(img):
+    se = np.uint8([[0,1,0],
+                   [1,1,1],
+                   [0,1,0]])
+    
+    img = cv.erode(img,se,iterations=1)
+    
+    img=img.astype(np.float32)
+    img=img.reshape(1,28,28,1)
+    
+    img=tf.keras.utils.normalize(img,axis=1)
+    return img
+
+def show(img):
+    plt.imshow(img,cmap='gray'),plt.xticks([]),plt.yticks([])
+    plt.show()
+
+x_train=[]
+y_train=np.array([0,1,2,3,4,5,6,7,8,9])
+
+for i in os.listdir('./trainSample/'):
+    path = './trainSample/'+i 
+
+    img=cv.imread(path, cv.IMREAD_GRAYSCALE)
+    img=preprocessing(img)
+    
+    x_train.append(img)
+
+
+# 훈련 집합 구조를 변환하고 정규화
+x_train=np.array([img])
+x_train=x_tarin.reshape(10,28,28,1)
+
+# 부류를 원핫코드로 변환
+y_train=tf.keras.utils.to_categorical(y_train,10)
+
+img=cv.imread('TestSample/7.jpg')
+
+gray=cv.cvtColor(img,cv.COLOR_BGR2GRAY) 
+gray=gray.resize((32,32))
+
+
+cv.imshow('test',gray)
+
+cv.waitKey()
+cv.destroyAllWindows()
 
 
