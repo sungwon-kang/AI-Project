@@ -211,7 +211,9 @@ class InMyHand(QMainWindow):
                                 'tip1. 손 이미지 배율 슬라이더를 이용하면 불러올 손 이미지 크기 배율을 조절할 수 있습니다.\n'
                                 'tip2. 효과 이미지 배율 슬라이더를 이용하여 불러올 효과 이미지 크기 배율을 조절할 수 있습니다.\n'
                                 'tip3. (x,y)위치이동 슬라이더를 이용하여 합성된 이미지에서 효과 부분을 옮길 수 있습니다.\n'                            
-                                
+                                '\n[주의]\n'
+                                '주의1. 배율 조절은 설정 이후 손 또는 효과 이미지를 다시 불러와야 배율이 적용됩니다.'
+                                '주의2. 위치이동을 조절한 후 이미지 합성 버튼을 누르면 바로 적용할 수 있습니다.'
                                 '\n[제공]\n'
                                 '  Sample폴더에 제 손 이미지와 기본 3개 효과이미지를 제공합니다.\n프로그램이 정상적으로 실행되길 기대합니다!'
                                 )
@@ -344,7 +346,7 @@ class InMyHand(QMainWindow):
             # 정규화된 손목 위치를 손 이미지 크기를 곱하여 손 이미지에서 손목의 위치를 얻는다.
             # 손목 위치에서 효과 이미지 너비와 높이를 계산하여 중앙이 손목 위치인 사각형 좌표(x1,x2,y1,y2)를 얻는다.
             # 사각형 좌표는 x, y 값으로 조절 가능하다.
-            x1,x2=int(self.wrist.x*self.img_w-self.e_w/2)-self.x,int(self.wrist.x*self.img_w+self.e_w/2)-self.x
+            x1,x2=int(self.wrist.x*self.img_w-self.e_w/2)+self.x,int(self.wrist.x*self.img_w+self.e_w/2)+self.x
             y1,y2=int(self.wrist.y*self.img_h-self.e_h/2)-self.y,int(self.wrist.y*self.img_h+self.e_h/2)-self.y
             print(x1, x2)
             print(y1, y2)
