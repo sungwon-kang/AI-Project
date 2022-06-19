@@ -19,26 +19,43 @@ def resize(img):
     img=cv.resize(img, (28,28))
     return img
 
-def preprocessing(img):
+def morphology(gray):
     # 모폴로지 구조
     se = np.uint8([[0,1,0],
                    [1,1,1],
                    [0,1,0]])
     
     # 침식
-    img = cv.erode(img,se,iterations=1)
+    mop_img = cv.erode(gray,se,iterations=1)    
+    return mop_img
+
+# 영상 이진화
+def Binary_img(gray):
+    t,bin_img=cv.threshold(gray,0,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
+    return bin_img
+
+# 흑백 반전
+def inversion_img(img):
+    inv=img.copy()
+    inv_img=255-inv
+    return inv_img
+
+def preprocessing(img):
+    bin_img=Binary_img(img)
+    mop_img=morphology(bin_img)
     
-    img=img.reshape(28,28,1)
+    img=mop_img.reshape(28,28,1)
     img=tf.keras.utils.normalize(img,axis=1)
     
     return img
 
+    
 def show(img):
     plt.imshow(img,cmap='gray'),plt.xticks([]),plt.yticks([])
     plt.show()
 
 
-def load_imgs(path, a):
+def load_imgs(path, inversion):
     imgs=[]
     
     for i in os.listdir('./'+path+'/'):
@@ -46,23 +63,34 @@ def load_imgs(path, a):
 
         img=cv.imread(fpath, cv.COLOR_RGB2BGR)
         gray=cv.cvtColor(img,cv.COLOR_BGR2GRAY)
-    
+        
         # 흑백 반전
-        if a>0:
-            rev=gray.copy()
-            gray=a-rev
-        
+        if inversion==True:
+            gray=inversion_img(gray)
+
         proceed_img=preprocessing(gray)
-        imgs.append(proceed_img)
-        
-        # show(proceed_img)
+        imgs.append(proceed_img)        
+    
+    show(imgs[7])
     return imgs
         
     
 #%%
-# cookie 훈련 집합과 검증 집합
-x_train_cookie=np.array(load_imgs('trainSample',255), dtype='float32')
-x_test_cookie=np.array(load_imgs('valSample', 0), dtype='float32')
+(x_train_mnist,y_train_mnist),(x_test_mnist,y_test_mnist)= ds.mnist.load_data()
+# show(x_train_mnist[0])
+# print(y_train_mnist[0])
+# # MNIST 훈련 집합과 테스트 집합의 구조를 변환하고 정규화, 28x28x1 2차원 구조
+x_train_mnist=x_train_mnist.reshape(60000,28,28,1)
+x_test_mnist=x_test_mnist.reshape(10000,28,28,1)
+x_train_mnist=x_train_mnist.astype(np.float32)/255.0
+x_test_mnist=x_test_mnist.astype(np.float32)/255.0
+
+y_train_mnist=tf.keras.utils.to_categorical(y_train_mnist,10)
+y_test_mnist=tf.keras.utils.to_categorical(y_test_mnist,10)
+
+# # cookie 훈련 집합과 검증 집합
+x_train_cookie=np.array(load_imgs('trainSample',True), dtype='float32')
+x_test_cookie=np.array(load_imgs('valSample', False), dtype='float32')
 
 # 부류를 원핫코드로 변환
 y_train_cookie=np.array([0,1,2,3,4,5,6,7,8,9])
@@ -70,7 +98,15 @@ y_test_cookie=np.array([0,1,2,3,4,5,6,7,8,9])
 
 y_train_cookie=tf.keras.utils.to_categorical(y_train_cookie,10)
 y_test_cookie=tf.keras.utils.to_categorical(y_test_cookie,10)
+#%%
+# 배열 합치기
+# 이미지
+x_train=np.concatenate([x_train_mnist,x_train_cookie])
+x_test=np.concatenate([x_test_mnist,x_test_cookie])
 
+# 부류
+y_train=np.concatenate([y_train_mnist,y_train_cookie])
+y_test=np.concatenate([y_test_mnist,y_test_cookie])
 #%%
 
 # 신경망 모델 설계
@@ -101,22 +137,43 @@ cnn.add(Dense(10,activation='softmax'))
 # 신경망 모델 학습
 cnn.compile(loss='categorical_crossentropy',optimizer=Adam(learning_rate=0.001),metrics=['accuracy'])
 
-es = EarlyStopping(monitor='val_accuracy', 
-                   mode='max', verbose=1, patience=50)
+# es = EarlyStopping(monitor='val_accuracy', 
+#                    mode='max', verbose=1, patience=50)
 
-generator=ImageDataGenerator(width_shift_range=0.2,height_shift_range=0.2,rotation_range=0.2)
+generator=ImageDataGenerator(width_shift_range=0.5,height_shift_range=0.5,rescale=0.4)
 hist = cnn.fit_generator(generator.flow(x_train, y_train, batch_size=128),
-                         epochs=100, validation_data=(x_test, y_test),
-                         callbacks=[es], verbose=1)
+                         epochs=60, validation_data=(x_test, y_test), verbose=1)
     
+#%%
 # 학습된 모델 저장
 cnn.save('cnn_v4.h5')
-
-# 신경망 모델 정확률 평가
 #%%
+# 신경망 모델 정확률 평가
 res=cnn.evaluate(x_test,y_test,verbose=0)
 print("정확률은",res[1]*100)
+#%%
+# 혼동 행렬 구함 ( 예측 i , 실제 j )
+conf=np.zeros((10,10))          #10x10 0으로 채운 행렬 생
+res=cnn.predict(x_test_cookie)
 
+y=np.array([0,1,2,3,4,5,6,7,8,9])
+
+for img in x_test_cookie:
+    show(img)
+    
+for i in range(len(res)):       	#예측한 값이 들어간 res의 길이만큼 반복
+    conf[np.argmax(res[i])][y[i]]+=1 	 #res[i]측정한 값, y_test[i]실제 값 위치에 +1
+    
+print(conf)		# 출력, 대각선 부분이 예측과 실제값이 일치한 부분이다.
+
+# 정확률 측정하고 출력
+no_correct =0
+for i in range(10):
+    no_correct+=conf[i][i] # 혼동행렬의 대각선 부분을 모두 더한다.
+
+accuracy = no_correct/len(res) # 모두 더한 값에 예측값 수을 나누면 정확도를 구할 수 있다.
+print(accuracy*100,"%")
+#%%
 import matplotlib.pyplot as plt
 
 # 정확률 그래프
