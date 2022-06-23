@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import numpy as np
 import tensorflow as tf
 import Imageprocessor as ip
@@ -11,7 +10,9 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0" # -1은 CPU, 나머지 번호는 GPU
-
+tf.__version__
+from tensorflow.python.client import device_lib
+print(device_lib.list_local_devices())
 #%%
 IP=ip.Imageprocessor()
 (x_train_mnist,y_train_mnist),(x_test_mnist,y_test_mnist)= ds.mnist.load_data()
@@ -25,8 +26,8 @@ y_train_mnist=tf.keras.utils.to_categorical(y_train_mnist,10)
 y_test_mnist=tf.keras.utils.to_categorical(y_test_mnist,10)
 
 # cookie 훈련 집합과 검증 집합
-x_train_cookie=np.array(IP.load_imgs('trainSample',True), dtype='float32')
-x_test_cookie=np.array(IP.load_imgs('valSample', False), dtype='float32')
+x_train_cookie=np.array(IP.load_imgs('1_trainSample',True), dtype='float32')
+x_test_cookie=np.array(IP.load_imgs('2_valSample', False), dtype='float32')
 
 # 부류를 원핫코드로 변환
 y_train_cookie=np.array([0,1,2,3,4,5,6,7,8,9,0])
@@ -135,4 +136,5 @@ plt.xlabel('Epoch')
 plt.legend(['Train','Validation'],loc='best')
 plt.grid()
 plt.show()
+
 

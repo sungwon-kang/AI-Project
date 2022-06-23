@@ -27,7 +27,7 @@ from tensorflow.keras.models import load_model
 		2. (2)의 행동을 한번 더 찍어 (x1,x2,y1,y2)를 얻고 임의의 단축키를 눌러 숫자 이미지를 캡처한다.
         3. 종료 단축키를 누르지 않을 시, 1번을 반복 수행할 수 있다. 종료 단축키를 누르면 캡처 기능이 멈춘다.
         
-	[전처리 기능]
+	[분할 이후 전처리 기능]
 		1. 얻은 이미지를 한 자릿수로 인식할 수 있도록 분할한다.
 		2. 분할한 이미지들을 저장한다.
 		3. 분할한 이미지들을 모델의 입력 데이터 형태로 변화하고 인식을 수행한다.
@@ -40,6 +40,7 @@ from tensorflow.keras.models import load_model
 '''
 #%%
 class DigitCapture(QMainWindow):
+    
     x1=-1
     x2=-1
     
@@ -47,6 +48,8 @@ class DigitCapture(QMainWindow):
     y2=-1
     
     keyFlag=True
+    proceed_imgs=[]
+    
     def __init__(self):
         # 메인 윈도우 창 크기와 타이틀 지정
         super().__init__()
@@ -56,6 +59,8 @@ class DigitCapture(QMainWindow):
         self.setFixedSize(800, 250)
         self.setWidget()
     
+        # self.cnn=load_model('cnn_v4.h5')
+        
     # 키 이벤트 캡처 기능
     def keyPressEvent(self, e):
         printable=[Qt.Key_Q, Qt.Key_W, Qt.Key_E]
@@ -93,6 +98,28 @@ class DigitCapture(QMainWindow):
                     pyautogui.screenshot(fileName, region=(sorted_x_value[0], sorted_y_value[0], width, height))
                     print("저장완료")
                     
+    def processingFunction(self):
+        IP=ip.Imageprocessor()
+        # 다이알로그를 이용하거나 상대경로로 지정할 예정
+        img=cv.imread('./3_CaptureSample/test.jpg')
+        
+        # 입력 박스에서 매개변수를 받아오도록 구현할 예정
+        cropped_imgs=IP.crop(cv_img=img, init_n=2, img_n=5, crop_fx1=-4, crop_fx2=0)
+        # 전처리 
+        self.proceed_imgs=[]
+        for img in cropped_imgs:
+            img=IP.preprocessing(img)
+            self.proceed_imgs.append(img)
+            
+            
+    def predictFunction(self):
+        if len(self.proceed_imgs)==0:
+            print("등록된 이미지가 없습니다.")
+           
+        else:
+            cookie_digit_img=np.array([self.proceed_imgs],dtype='float32')
+            self.cnn.predict(cookie_digit_img)
+        
     # btn_guide(사용법) 이벤트 함수    
     def showGuideFunction(self):
         QMessageBox.information(self, '사용법', '')
@@ -116,8 +143,8 @@ class DigitCapture(QMainWindow):
         layout_bottom = QVBoxLayout()
         
         # 버튼 및 라벨 설정
-        btn_capture = QPushButton('temp', self)
-        # btn_loadeffect = QPushButton('2. 효과 불러오기', self)
+        btn_processing = QPushButton('분할 및 전처리', self)
+        btn_predict = QPushButton('예측', self)
         # btn_recognition = QPushButton('3. 손 인식하기', self)
         # btn_compose = QPushButton('4. 이미지 합성', self)
         
@@ -126,8 +153,8 @@ class DigitCapture(QMainWindow):
         btn_quit = QPushButton('나가기', self)
 
         # 각 위젯 위치와 크기 지정 
-        btn_capture.setGeometry(10, 10, 100, 30)
-        # btn_loadeffect.setGeometry(110, 10, 100 , 30)
+        btn_processing.setGeometry(10, 10, 100, 30)
+        btn_predict.setGeometry(110, 10, 100 , 30)
         # btn_recognition.setGeometry(210, 10, 100, 30)
         # btn_compose.setGeometry(310, 10, 100, 30)
         
@@ -137,8 +164,8 @@ class DigitCapture(QMainWindow):
                   
 
         #상단 프레임 레이아웃 위젯 추가
-        layout_top.addWidget(btn_capture)
-        # layout_top.addWidget(btn_loadeffect)
+        layout_top.addWidget(btn_processing)
+        layout_top.addWidget(btn_predict)
         # layout_top.addWidget(btn_recognition)
         # layout_top.addWidget(btn_compose)
         layout_top.addWidget(btn_guide)
@@ -150,8 +177,8 @@ class DigitCapture(QMainWindow):
         main_layout.addWidget(frame_bottom)
         
         # 각 버튼에 콜백함수 연결
-        # btn_capture.clicked.connect(self.capturefunction)
-        # btn_loadeffect.clicked.connect(self.loadeffectFunction)
+        btn_processing.clicked.connect(self.processingFunction)
+        btn_predict.clicked.connect(self.predictFunction)
         # btn_recognition.clicked.connect(self.recognitionFunction)
         # btn_compose.clicked.connect(self.composeFunction)
         # btn_save.clicked.connect(self.saveImgFunction)
