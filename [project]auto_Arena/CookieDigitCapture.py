@@ -12,7 +12,7 @@ import pyautogui    # mouse, keyboard 관련 도구함 끌어오기
 import pyperclip    # 클립보드에 저장 혹은 클립보드에서 불러오기 위함
 
 from tensorflow.keras.models import load_model
-
+IP=ip.Imageprocessor()
 #%%
 # 처리 순서
 # 1. 이미지 재조정
@@ -48,19 +48,16 @@ class DigitCapture(QMainWindow):
     y2=-1
     
     keyFlag=True
-    proceed_imgs=[]
     
     def __init__(self):
         # 메인 윈도우 창 크기와 타이틀 지정
         super().__init__()
         self.setWindowTitle('내 손안에 흑염룡이')
-        
         self.setGeometry(200, 200, 800, 250)
         self.setFixedSize(800, 250)
         self.setWidget()
-    
-        # self.cnn=load_model('cnn_v4.h5')
         
+        self.cnn=load_model('0_models/cnn_v4.h5')
     # 키 이벤트 캡처 기능
     def keyPressEvent(self, e):
         printable=[Qt.Key_Q, Qt.Key_W, Qt.Key_E]
@@ -94,32 +91,46 @@ class DigitCapture(QMainWindow):
                 pyperclip.copy("({}, {}, {}, {})".format(x_re, y_re, width_re, height_re))
                 
                 if 'x_re' in locals(): # 메모리 변수 속에 있는 것을 불러오기. 따라서 x_re이 있어야 함.
-                    fileName = str("test") + ".jpg"
+                    fileName = str("test3") + ".jpg"
                     pyautogui.screenshot(fileName, region=(sorted_x_value[0], sorted_y_value[0], width, height))
                     print("저장완료")
                     
     def processingFunction(self):
-        IP=ip.Imageprocessor()
         # 다이알로그를 이용하거나 상대경로로 지정할 예정
         img=cv.imread('./3_CaptureSample/test.jpg')
         
         # 입력 박스에서 매개변수를 받아오도록 구현할 예정
-        cropped_imgs=IP.crop(cv_img=img, init_n=2, img_n=5, crop_fx1=-4, crop_fx2=0)
-        # 전처리 
-        self.proceed_imgs=[]
+        cropped_imgs=IP.crop(cv_img=img, init_n=1, img_n=7, crop_fx1=-4, crop_fx2=0,y2=28)
+        
+        tmp_Imglist=[]
         for img in cropped_imgs:
-            img=IP.preprocessing(img)
-            self.proceed_imgs.append(img)
-            
-            
+            # print(type(img))
+            proceed_img=IP.preprocessing(img)
+            tmp_Imglist.append(proceed_img)
+        
+        self.proceed_imgs=np.array(tmp_Imglist, dtype=IP.Data_type)
+        print(self.proceed_imgs.shape)
+        print("전처리 완료")
+        
     def predictFunction(self):
+        
         if len(self.proceed_imgs)==0:
             print("등록된 이미지가 없습니다.")
            
         else:
-            cookie_digit_img=np.array([self.proceed_imgs],dtype='float32')
-            self.cnn.predict(cookie_digit_img)
-        
+            res=self.cnn.predict(self.proceed_imgs)           
+            num=0
+            n_digit = len(res)-1
+            for digit in res:
+                predicted_num=np.argmax(digit)
+                
+                num+=predicted_num*(10**n_digit)
+                n_digit=n_digit-1
+                
+                print(predicted_num)
+                
+            print(num)
+    
     # btn_guide(사용법) 이벤트 함수    
     def showGuideFunction(self):
         QMessageBox.information(self, '사용법', '')
@@ -197,8 +208,8 @@ cnn=load_model('./models/cnn_v4.h5')
 
 # cookie 훈련 집합과 검증 집합
 IP=ip.Imageprocessor()
-x_train_cookie=np.array(IP.load_imgs('trainSample',True), dtype='float32')
-x_test_cookie=np.array(IP.load_imgs('valSample', False), dtype='float32')
+x_train_cookie=IP.load_imgs('trainSample',True)
+x_test_cookie=IP.load_imgs('valSample', False)
 
 # 부류를 원핫코드로 변환
 y_train_cookie=np.array([0,1,2,3,4,5,6,7,8,9,0])

@@ -7,7 +7,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D,MaxPooling2D,Flatten,Dense,Dropout
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
+from tensorflow.keras.callbacks import EarlyStopping
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0" # -1은 CPU, 나머지 번호는 GPU
 tf.__version__
@@ -26,8 +26,8 @@ y_train_mnist=tf.keras.utils.to_categorical(y_train_mnist,10)
 y_test_mnist=tf.keras.utils.to_categorical(y_test_mnist,10)
 
 # cookie 훈련 집합과 검증 집합
-x_train_cookie=np.array(IP.load_imgs('1_trainSample',True), dtype='float32')
-x_test_cookie=np.array(IP.load_imgs('2_valSample', False), dtype='float32')
+x_train_cookie=IP.load_imgs('1_trainSample',True)
+x_test_cookie=IP.load_imgs('2_valSample', False)
 
 # 부류를 원핫코드로 변환
 y_train_cookie=np.array([0,1,2,3,4,5,6,7,8,9,0])
@@ -77,12 +77,11 @@ cnn.add(Dense(10,activation='softmax'))
 # 신경망 모델 학습
 cnn.compile(loss='categorical_crossentropy',optimizer=Adam(learning_rate=0.001),metrics=['accuracy'])
 
-# es = EarlyStopping(monitor='val_accuracy', 
-#                     mode='max', verbose=1, patience=30)
+es = EarlyStopping(monitor='loss', mode='min', verbose=1, patience=25)
 
 generator=ImageDataGenerator(width_shift_range=0.5,height_shift_range=0.5,rescale=0.4)
-hist = cnn.fit_generator(generator.flow(x_train, y_train, batch_size=128),
-                         epochs=100, validation_data=(x_test, y_test), verbose=1)
+hist = cnn.fit(generator.flow(x_train, y_train, batch_size=128), epochs=50, validation_data=(x_test, y_test), 
+               callbacks=[es], verbose=1)
     
 #%%
 # 학습된 모델 저장

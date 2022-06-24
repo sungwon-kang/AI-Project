@@ -1,20 +1,39 @@
 import os
 import cv2 as cv
 import numpy as np
-from PIL import Image
-
 import tensorflow as tf
+
+from PIL import Image
+from skimage import morphology
 from matplotlib import pyplot as plt
 #%%
 class Imageprocessor:
+    
+    Data_type='float32'
+    ImgSize=28
     
     def __init__(self):
         # 모폴로지 구조
         self.se = np.uint8([[0, 1, 0],
                    [1, 1, 1],
                    [0, 1, 0]])
+     
+    def PILtoCV(self, PIL_img):
+         np_img=np.array(PIL_img)
+         cv_img=cv.cvtColor(np_img, cv.COLOR_RGB2BGR)
+         cv_img=cv.cvtColor(cv_img, cv.COLOR_BGR2GRAY)
+         return cv_img
+     
+    def CVtoPIL(self, CV_img):
+        cv_img = cv.cvtColor(CV_img, cv.COLOR_BGR2RGB)
+        PIL_img = Image.fromarray(cv_img)
+        return PIL_img
+    
+    def show(self, img):
+        plt.imshow(img, cmap='gray'), plt.xticks([]), plt.yticks([])
+        plt.show()
         
-    def crop(self, cv_img, init_n, img_n, crop_fx1,crop_fx2):
+    def crop(self, cv_img, init_n, img_n, crop_fx1, crop_fx2, y2):
         
         i=init_n             # 초기 이미지 너비 조정
         n=img_n             # 이미지 분할 수
@@ -22,8 +41,7 @@ class Imageprocessor:
         fx2=crop_fx2
         
         # OpenCV -> PIL
-        cvt_img = cv.cvtColor(cv_img, cv.COLOR_BGR2RGB)
-        img = Image.fromarray(cvt_img)
+        img = self.CVtoPIL(cv_img)
         
         #이미지의 크기 출력
         width, height = img.size
@@ -39,82 +57,99 @@ class Imageprocessor:
             x1 = wn*i+fx1
             x2 = wn*(i+1)+fx2
             
-            croppedImage=img.crop(( x1 , 0, x2, height))
+            croppedImage=img.crop(( x1 , 0, x2, y2))
             print("잘려진 사진 크기 :",croppedImage.size)
             croppedImgs.append(croppedImage)
             croppedImage.save('./3_CaptureSample/croppedSample/test'+str(i)+'.jpg')
         
         return croppedImgs
     
-    def resize(self, img):
-        n=28
-        
-        # PIL -> OpenCV
-        img=np.array(img)
-        img=cv.cvtColor(img, cv.COLOR_RGB2GRAY)
-        
-        height, width = img.shape
+    def resize(self, gray):
+        n=self.ImgSize
+        print(type(gray))
+        # cv_img가 PIL이 아닌 경우 PIL -> OpenCV
+        if str(type(gray)) == str("<class 'PIL.Image.Image'>"):
+            gray=self.PILtoCV(gray)
+
+        height, width = gray.shape[0], gray.shape[1]
+        print('height :',height, 'width :',width)
         
         f = n-height+n-width
         if f<0:
-            img = cv.resize(img, (n, n), interpolation = cv.INTER_AREA)
+            gray = cv.resize(gray, (n, n), interpolation = cv.INTER_AREA)
             
         elif f>0:
-            img = cv.resize(img, (n, n), interpolation = cv.INTER_LINEAR)
+            gray = cv.resize(gray, (n, n), interpolation = cv.INTER_LINEAR)
         
-        return img
-
+        self.show(gray)
+        return gray
+    
+    # 영상 이진화
+    def binary_img(self, gray):
+        t, bin_img = cv.threshold(gray, 100, 255, cv.THRESH_BINARY)
+        self.show(bin_img)
+        return bin_img
+    
+    # 픽셀 이하 연결요소를 삭제
+    def remove_PixelFewer(self, bin_img):
+        
+        # bool 형 배열로 변환
+        bool_img=np.array(bin_img, bool)
+        
+        # 최소 100개 이상 픽셀인 연결 요소를 남기고 나머지 모두 삭제
+        cleaned_img = morphology.remove_small_objects(bool_img, min_size=100, connectivity=1)
+        
+        # 다시 이진 영상으로 변환
+        gray_img=np.array(cleaned_img, dtype='uint8')
+        self.show(gray_img)
+        return gray_img
+    
     # 침식
     def morphology(self, gray):
         mop_img = cv.erode(gray, self.se, iterations=1)
+        self.show(mop_img)
         return mop_img
-
-    # 영상 이진화
-    def binary_img(self, gray):
-        t, bin_img = cv.threshold(gray, 0, 255, cv.THRESH_BINARY+cv.THRESH_OTSU)
-        return bin_img
-
+    
     # 흑백 반전
     def inversion_img(self, img):
         inv = img.copy()
         inv_img = 255-inv
+        self.show(inv_img)
         return inv_img
 
     # 위 과정들을 순서대로 수행
     def preprocessing(self, img):
     
-        resized_img= self.resize(img)
-        bin_img = self.binary_img(resized_img)
-        mop_img = self.morphology(bin_img)
+        gray= self.resize(img)
+        bin_img = self.binary_img(gray)
+        cleaned_img=self.remove_PixelFewer(bin_img)        
+        mop_img = self.morphology(cleaned_img)
         
-        self.show(mop_img)
-        
-        img = mop_img.reshape(28, 28, 1)
+        n = self.ImgSize
+        img = mop_img.reshape(n, n, 1)
         img = tf.keras.utils.normalize(img, axis=1)
         
         return img
+    
 
+    def load_img(self, path, filename, inversion):
+        fpath = './'+path+'/'+filename
 
-    def show(self, img):
-        plt.imshow(img, cmap='gray'), plt.xticks([]), plt.yticks([])
-        plt.show()
+        img = cv.imread(fpath, cv.COLOR_RGB2BGR)
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
+        # 흑백 반전 [배경이 흰색이고 숫자가 검은색인 경우 필요]
+        if inversion == True:
+            gray = self.inversion_img(gray)
+
+        proceed_img = self.preprocessing(gray)
+        return np.array(proceed_img, dtype=self.Data_type)
     
     def load_imgs(self, path, inversion):
         imgs = []
-
         for i in os.listdir('./'+path+'/'):
-            fpath = './'+path+'/'+i
-
-            img = cv.imread(fpath, cv.COLOR_RGB2BGR)
-            gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-
-            # 흑백 반전 [배경이 흰색이고 숫자가 검은색인 경우 필요]
-            if inversion == True:
-                gray = self.inversion_img(gray)
-            
-            # self.show(gray)
-            proceed_img = self.preprocessing(gray)
-            
+            print(i)
+            proceed_img=self.load_img(path, i, inversion)
             imgs.append(proceed_img)
-        return imgs
+            
+        return np.array(imgs,dtype=self.Data_type)

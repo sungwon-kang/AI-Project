@@ -1,40 +1,35 @@
 import numpy as np
 import cv2 as cv
-import Imageprocessor as IP
-import matplotlib.pyplot as plt
+import Imageprocessor as ip
 from tensorflow.keras.models import load_model
 
-ip=IP.Imageprocessor()
-#%%
-img=cv.imread('./3_CaptureSample/test.png')
-ip.crop(cv_img=img, init_n=2, img_n=5, crop_fx1=-4, crop_fx2=0)
-#%%
-Imgs=[]
-for i in range (5):
-    img=cv.imread('./3_CaptureSample/croppedSample/test'+str(i)+'.png',cv.COLOR_RGB2BGR)
-    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    # ip.show(gray)
-    Imgs.append(gray)
-
-
-proceed_imgs=[]
-
-for img in Imgs:
-    img=ip.preprocessing(img)
-    proceed_imgs.append(img)
-
-imgs=np.array([proceed_imgs],dtype='float32')
-#%%
-# 혼동 행렬 구함 ( 예측 i , 실제 j )
-conf=np.zeros((10,10))          #10x10 0으로 채운 행렬 생성
+IP=ip.Imageprocessor()
 cnn = load_model('0_models/cnn_v4.h5')
-res=cnn.predict(imgs)
+#%%
+n=7
+img=cv.imread('./3_CaptureSample/test.jpg')
+IP.crop(cv_img=img, init_n=1, img_n=n, crop_fx1=-3, crop_fx2=0,y2=28)
+#%%
 
-y=np.array([0,0,3,4,4,0])
+# 여러 이미지
+Imgs=[]
+Imgs=IP.load_imgs('3_CaptureSample/croppedSample', False)
+Imgs=np.array(Imgs,dtype='float32')
+print(Imgs.shape)
+#%%
+# 단일 이미지
+img=IP.load_img('2_valSample', 'bg2.jpg', False)
+print(img.shape)
+#%%
+# 예측
+res=cnn.predict(img)
 
-for img in imgs:
-    ip.show(img)
-    
+# 부류
+y=np.array([1,1,1,0,3,9,1])
+#%%
+
+
+conf=np.zeros((10,10))          #10x10 0으로 채운 행렬 생성
 for i in range(len(res)):       	#예측한 값이 들어간 res의 길이만큼 반복
     conf[np.argmax(res[i])][y[i]]+=1 	 #res[i]측정한 값, y_test[i]실제 값 위치에 +1
     
