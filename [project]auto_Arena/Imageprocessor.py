@@ -6,6 +6,7 @@ import tensorflow as tf
 from PIL import Image
 from skimage import morphology
 from matplotlib import pyplot as plt
+
 #%%
 class Imageprocessor:
     
@@ -33,34 +34,43 @@ class Imageprocessor:
         plt.imshow(img, cmap='gray'), plt.xticks([]), plt.yticks([])
         plt.show()
         
-    def crop(self, cv_img, init_n, img_n, crop_fx1, crop_fx2, y2):
+    def crop(self, Savepath, cv_img, init_n, img_n, crop_fx1, crop_fx2, y2):
         
         i=init_n             # 초기 이미지 너비 조정
         n=img_n             # 이미지 분할 수
         fx1=crop_fx1           # 분할 조절
         fx2=crop_fx2
+       
         
         # OpenCV -> PIL
         img = self.CVtoPIL(cv_img)
         
         #이미지의 크기 출력
         width, height = img.size
-        
         print('이미지 크기 (w, h):', width, height)
         width=width/i
         # print(width)
         
         # 이미지 자르기 crop함수 이용 ex. crop(left,up, rigth, down)
-        wn =  width/n
         croppedImgs=[]
+        wn =  width/n
+        
+        # 삭제할 것
+        splited_path=Savepath.split(sep='/')
+        subpath=splited_path[1]
+        folder=splited_path[2]
+        
         for i in range (n):
             x1 = wn*i+fx1
             x2 = wn*(i+1)+fx2
             
             croppedImage=img.crop(( x1 , 0, x2, y2))
-            print("잘려진 사진 크기 :",croppedImage.size)
+            print("잘려진 사진 크기 :",croppedImage.size)    
             croppedImgs.append(croppedImage)
-            croppedImage.save('./3_CaptureSample/croppedSample/test'+str(i)+'.jpg')
+            
+            # 삭제할 것
+            rpath='./'+subpath+'/'+folder+'/'+folder+'['+str(i)+']'+'.jpg'
+            croppedImage.save(rpath)
         
         return croppedImgs
     
@@ -118,12 +128,17 @@ class Imageprocessor:
         return inv_img
 
     # 위 과정들을 순서대로 수행
-    def preprocessing(self, img):
+    # 매개변수 삭제할 것
+    def preprocessing(self, img, tmp_DateName, i):
     
         gray= self.resize(img)
         bin_img = self.binary_img(gray)
         cleaned_img=self.remove_PixelFewer(bin_img)        
         mop_img = self.morphology(cleaned_img)
+        
+        # 삭제할 것
+        tmp_path='./3_CaptureSample/'+tmp_DateName+'/prcd_'+tmp_DateName+'['+str(i)+'].jpg'
+        plt.imsave(tmp_path,mop_img,cmap="gray")
         
         n = self.ImgSize
         img = mop_img.reshape(n, n, 1)
