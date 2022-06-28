@@ -77,6 +77,7 @@ class Imageprocessor:
     
     def resize(self, gray):
         n=self.ImgSize
+        print(type(gray))
         # cv_img가 PIL이 아닌 경우 PIL -> OpenCV
         if str(type(gray)) == str("<class 'PIL.Image.Image'>"):
             gray=self.PILtoCV(gray)
@@ -129,20 +130,16 @@ class Imageprocessor:
 
     # 위 과정들을 순서대로 수행
     # 매개변수 삭제할 것
-    
-    # def tmp_SaveImg(tmp_DateName, i):
-    #     # 삭제할 것
-    #     tmp_path='./3_CaptureSample/2022-06-28/'+tmp_DateName+'/prcd_'+tmp_DateName+'['+str(i)+'].jpg'
-    #     plt.imsave(tmp_path,mop_img,cmap="gray")
-        
-    def preprocessing(self, img): #, tmp_DateName, i):'''
+    def preprocessing(self, img, tmp_DateName, i):
     
         gray= self.resize(img)
         bin_img = self.binary_img(gray)
         cleaned_img=self.remove_PixelFewer(bin_img)        
         mop_img = self.morphology(cleaned_img)
         
-        # tmp_SaveImg(tmp_DateName, i)
+        # 삭제할 것
+        tmp_path='./3_CaptureSample/2022-06-28/'+tmp_DateName+'/prcd_'+tmp_DateName+'['+str(i)+'].jpg'
+        plt.imsave(tmp_path,mop_img,cmap="gray")
         
         n = self.ImgSize
         img = mop_img.reshape(n, n, 1)
@@ -166,13 +163,12 @@ class Imageprocessor:
     
     def load_imgs(self, path, inversion):
         imgs = []
-        unloadable = ['prcd','cap_']
         for i in os.listdir(path+'/'):
             # ver0.1 삭제할 예정
-            if(i[:4] not in unloadable):
+            if(i[:4]!='prcd'):
                 print(i)
                 proceed_img=self.load_img(path, i, inversion)
                 imgs.append(proceed_img)
-        print(path,"이미지들 작업 끝")
+                
         return np.array(imgs,dtype=self.Data_type)
     
