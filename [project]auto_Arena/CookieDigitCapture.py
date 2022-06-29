@@ -68,11 +68,11 @@ class DigitCapture(QMainWindow):
         self.setFixedSize(800, 250)
         self.setWidget()
         
-        self.cnn=load_model('./0_models/cnn_v4.h5')
+        self.cnn=load_model('./0_models/cnn_v5.h5')
         self.ext='.jpg'
         # 임시 변수, 삭제할 예정
-        self.tmp_imgpath='./3_CaptureSample/2022-06-28/'
-        self.tmp_savepath='./3_CaptureSample/2022-06-28/'       
+        self.tmp_imgpath='./3_CaptureSample/2022-06-29/'
+        self.tmp_savepath='./3_CaptureSample/2022-06-29/'       
         
     # 키 이벤트 캡처 기능
     def keyPressEvent(self, e):
