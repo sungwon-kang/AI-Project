@@ -1,10 +1,12 @@
 import numpy as np
 import cv2 as cv
 import Imageprocessor as ip
+import os
 from tensorflow.keras.models import load_model
 
 IP=ip.Imageprocessor()
-cnn = load_model('0_models/cnn_v4.h5')
+cnn = load_model('0_models/cnn_v5.h5')
+
 #%%
 n=7
 img=cv.imread('./3_CaptureSample/test.jpg')
@@ -16,10 +18,6 @@ Imgs=[]
 Imgs=IP.load_imgs('3_CaptureSample/croppedSample', False)
 Imgs=np.array(Imgs,dtype='float32')
 print(Imgs.shape)
-#%%
-# 단일 이미지
-img=IP.load_img('2_valSample', 'bg2.jpg', False)
-print(img.shape)
 #%%
 # 예측
 res=cnn.predict(img)

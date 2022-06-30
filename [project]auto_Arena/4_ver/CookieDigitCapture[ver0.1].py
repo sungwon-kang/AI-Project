@@ -52,8 +52,6 @@ class DigitCapture(QMainWindow):
     y2=-1
     
     keyFlag=True
-    tmp_DateName=None
-    tmp_fileName=None
     tmp_predicted_lst=[]
     
     saved_p1_cord=[]
@@ -63,18 +61,15 @@ class DigitCapture(QMainWindow):
         # 메인 윈도우 창 크기와 타이틀 지정
         super().__init__()
         self.setWindowTitle('Auto Arena ver0.1')
-        self.setGeometry(200, 200, 450, 300)
-        self.setFixedSize(450, 300)
+        self.setGeometry(200, 200, 420, 100)
+        self.setFixedSize(420, 100)
         
-        self.lb_event = QLabel('Label1',self)
+        self.lb_event = QLabel('사용법을 확인하세요!',self)
         # self.lb_
         self.setUI()
         
         self.cnn=load_model('./0_models/cnn_v5.h5')
-        self.ext='.jpg'
-        # 임시 변수, 삭제할 예정
-        self.tmp_imgpath='./3_CaptureSample/2022-06-29/'
-        self.tmp_savepath='./3_CaptureSample/2022-06-29/'       
+        self.ext='.jpg'     
         
         
     # 키 이벤트 캡처 기능
@@ -112,8 +107,10 @@ class DigitCapture(QMainWindow):
             elif key == Qt.Key_E:
                 l1=len(self.saved_p1_cord)
                 l2=len(self.saved_p2_cord)
+                
                 if( ( l1>0 and l2 > 0) and (l1 == l2) ):
-                    for i in range(l1):
+                    n = len(l1)
+                    for i in range(n):
                         (x1,y1)=self.saved_p1_cord[i]
                         (x2,y2)=self.saved_p2_cord[i]
                         print("두 위치 ({}, {}), ({}, {})".format(x1,y1,x2,y2))
@@ -132,49 +129,45 @@ class DigitCapture(QMainWindow):
                         pyperclip.copy("({}, {}, {}, {})".format(x_re, y_re, width_re, height_re))
                 
                         if 'x_re' in locals(): # 메모리 변수 속에 있는 것을 불러오기. 따라서 x_re이 있어야 함.
-                            self.tmp_DateName=datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')
+                                
                             self.CaptureScreen(sorted_x_value, sorted_y_value, width, height)
                             # print(self.tmp_DateName)
                                                 
     def CaptureScreen(self, sorted_x_value, sorted_y_value, width, height):
-        # ver0.1 아닌 버전은 삭제할 것
-        # E를 누를 시 저장된 좌표에 맞춰 캡쳐
+        # 리스트에 저장된 좌표대로 이미지 리스트에 추가.
         
-        self.tmp_fileName = self.tmp_imgpath+self.tmp_DateName+'/cap_'+self.tmp_DateName+self.ext
-        
-        print(self.tmp_fileName)
-        os.mkdir(self.tmp_imgpath+self.tmp_DateName)
         
         img=pyautogui.screenshot(self.tmp_fileName ,region=(sorted_x_value[0], sorted_y_value[0], width, height))
         self.setText("좌표대로 이미지 저장됨")
         print(img)
+        
         # 삭제할 것
         # self.processingFunction()
         # self.predictFunction()
         # self.saveFunction()
         
     def processingFunction(self):
-        # 다이알로그를 이용하거나 상대경로로 지정할 예정
-        img=cv.imread(self.tmp_fileName)
+        # 리스트에 저장된 좌표대로 분할 이미지를 얻음
+        
+        # img=cv.imread(self.tmp_fileName)
         # 입력 박스에서 매개변수를 받아오도록 구현할 예정
         Savepath=str(self.tmp_savepath+self.tmp_DateName)
         cropped_imgs=IP.crop(Savepath, cv_img=img, init_n=1, img_n=7, crop_fx1=-4, crop_fx2=0,y2=28)
         
-        
         # 삭제할 것
-        i=0
-        tmp_Imglist=[]            
-        for img in cropped_imgs:
-            proceed_img=IP.preprocessing(img,self.tmp_DateName,i)
+        # i=0
+        # tmp_Imglist=[]            
+        # for img in cropped_imgs:
+        #     proceed_img=IP.preprocessing(img,self.tmp_DateName,i)
             
-            # 삭제할 것
-            tmp_Imglist.append(proceed_img)
-            i+=1
-        self.proceed_imgs=np.array(tmp_Imglist, dtype=IP.Data_type)
+        #     # 삭제할 것
+        #     tmp_Imglist.append(proceed_img)
+        #     i+=1
+        # self.proceed_imgs=np.array(tmp_Imglist, dtype=IP.Data_type)
         self.setText("이미지 전처리 작업 끝")
         
     def predictFunction(self):
-        
+        # 분할된 이미지들을 한 장씩 예측하여 이미지 추가
         if len(self.proceed_imgs)==0:
             self.setText("등록된 이미지가 없습니다.")
         else:
@@ -191,23 +184,11 @@ class DigitCapture(QMainWindow):
                 print(predicted_num)
             
             self.setText("예측된 값 "+str(num))
-    
-    def saveFunction(self):
-        with open(str(self.tmp_savepath+'labels.txt'), 'a') as File:
-            for i in range (7):
-                filename=self.tmp_DateName+'['+str(i)+'].jpg'+'\t\t'+str(self.tmp_predicted_lst[i])+'\t\n'
-                File.write(filename)
-                print('추가됨 :' + self.tmp_DateName+'['+str(i)+'].jpg', self.tmp_predicted_lst[i])
-            
-            File.write("===========================\n")
-            self.tmp_predicted_lst.clear()
-            File.close()
-        
-        self.setText("정상적으로 저장완료")
-    # btn_guide(사용법) 이벤트 함수    
-    
+       
+    # btn_guide(사용법) 이벤트 함수
     def showGuideFunction(self):
-        QMessageBox.information(self, '사용법', '[단축키]\n'+
+        QMessageBox.information(self, '사용법', 
+                                '[단축키]\n'+
                                 '  <Q>를 누를 시 마우스 포인터 기준으로 x1, y1이 저장됩니다.\n'+
                                 '  <W>를 누를 시 마우스 포인터 기준으로 x2, y2이 저장됩니다.\n'+
                                 '  <A>를 누를 시 <Q>와 <W>를 얻은 좌표를 리스트에 추가합니다.\n'+
@@ -217,11 +198,11 @@ class DigitCapture(QMainWindow):
                                 '  2. (1)을 반복해서 여러 좌표를 얻을 수 있습니다.\n'+
                                 '  3. <E>를 눌러 리스트에 저장된 좌표 쌍의 수만큼 캡처되고, 수를 예측합니다.\n'
                                 '  4. 예측된 수가 UI에 출력됩니다.'
-                                
-                                
                                 )
-    #btn_quit[나가기] 이벤트 함수    
+    # btn_quit[나가기] 이벤트 함수    
     def quitFunction(self):
+        self.close()
+        
         self.close()
     def setText(self, msg):
         self.lb_event.clear()
@@ -233,13 +214,8 @@ class DigitCapture(QMainWindow):
         frame_top.setGeometry(0,0,450,150)
         frame_top.setFrameShape(QFrame.Box | QFrame.Plain)
     
-        # frame_bottom = QFrame(self)
-        # frame_bottom.setGeometry(0,100,800,150)
-        # frame_bottom.setFrameShape(QFrame.Box | QFrame.Plain)
-    
         main_layout=QVBoxLayout()
         layout_top = QVBoxLayout()
-        # layout_bottom = QVBoxLayout()
         
         # 버튼 및 라벨 설정
         btn_processing = QPushButton('분할 및 전처리', self)
@@ -264,7 +240,6 @@ class DigitCapture(QMainWindow):
         
         # 메인 레이아웃에 모든 프레임을 추가
         main_layout.addWidget(frame_top)
-        # main_layout.addWidget(frame_bottom)
         
         # 각 버튼에 콜백함수 연결
         btn_processing.clicked.connect(self.processingFunction)

@@ -63,10 +63,10 @@ class DigitCapture(QMainWindow):
         # 메인 윈도우 창 크기와 타이틀 지정
         super().__init__()
         self.setWindowTitle('Auto Arena ver0.1')
-        self.setGeometry(200, 200, 450, 300)
-        self.setFixedSize(450, 300)
+        self.setGeometry(200, 200, 420, 100)
+        self.setFixedSize(420, 100)
         
-        self.lb_event = QLabel('Label1',self)
+        self.lb_event = QLabel('사용법을 확인하세요!',self)
         # self.lb_
         self.setUI()
         
