@@ -30,7 +30,6 @@ class DigitCapture(QMainWindow):
     # 키 이벤트 락
     keyFlag=True
     
-    
     captured_img=None       # 캡쳐 이미지 객체
     proceed_imgs=[]         # 분할된 이미지를 전처리된 이미지를 저장하는 이미지 리스트
     predicted_list=[]       # 예측된 수들을 저장하는 리스트
@@ -40,15 +39,15 @@ class DigitCapture(QMainWindow):
         # 메인 윈도우 초기화
         super().__init__()
         self.setWindowTitle('Auto Arena[ver0.1]')
-        self.setGeometry(200, 200, 600, 100)
-        self.setFixedSize(600, 100)
+        self.setGeometry(200, 200, 600, 300)
+        self.setFixedSize(600, 300)
         
         # UI 초기화
-        self.lb_event = QLabel('사용법을 확인하세요!',self)
+        self.lb_event = QLabel('사용법을 확인하세요!', self)
         self.setUI()
         
         # 학습 모델 불러오기
-        self.cnn=load_model('../0_models/cnn_v5.h5')
+        self.cnn=load_model('./0_models/cnn_v5.h5')
         # 확장자 초기화
         self.ext='.jpg'     
         
@@ -140,7 +139,7 @@ class DigitCapture(QMainWindow):
         
     def processingFunction(self):
         # 분할 함수 호출
-        cropped_imgs=IP.crop(cv_img=self.captured_img, init_n=1, img_n=7, crop_fx1=-4, crop_fx2=0,y2=28)
+        cropped_imgs=IP.crop(cv_img=self.captured_img, cut=1, crop_n=7, crop_fx1=-4, crop_fx2=0, y2=28)
         print("이미지 분할 완료")
         
         # 각 분할된 이미지들을 전처리
@@ -208,41 +207,61 @@ class DigitCapture(QMainWindow):
     def setUI(self):
         # 프레임과 레이아웃 선언
         frame_top = QFrame(self)
-        frame_top.setGeometry(0,0,600, 100)
+        frame_top.setGeometry(0,0, 610, 151)
         frame_top.setFrameShape(QFrame.Box | QFrame.Plain)
-    
-        main_layout=QVBoxLayout()
-        layout_top = QVBoxLayout()
         
+        frame_bottom = QFrame(self)
+        frame_bottom.setGeometry(0,150, 610, 150)
+        frame_bottom.setFrameShape(QFrame.Box | QFrame.Plain)
+        
+        main_layout=QVBoxLayout()
+        layout_top =QVBoxLayout()
+        layout_bottom=QVBoxLayout()
         # 버튼 및 라벨 설정
         # btn_processing = QPushButton('분할 및 전처리', self)
         # btn_predict = QPushButton('예측', self)
         
+        self.te_cut = QTextEdit()
+        
         btn_guide = QPushButton('사용법', self)       
         btn_quit = QPushButton('나가기', self)
-
+        lb_top = QLabel('설정', self)
+        
         # 각 위젯 위치와 크기 지정 
-        self.lb_event.setGeometry(10, 70, 590, 25)
-        btn_guide.setGeometry(10, 10, 100, 30)
-        btn_quit.setGeometry(490, 10, 100, 30)
-                  
+        self.lb_event.setGeometry(10, 260, 590, 30)
+        
+        btn_guide.setGeometry(380, 260, 100, 30)
+        btn_quit.setGeometry(490, 260, 100, 30)
+        lb_top.setGeometry(290,0,300,30)
+        lb_top.setStyleSheet("font-weight: bold;"
+                             "font-size: 20px")
 
         #상단 프레임 레이아웃 위젯 추가
-        layout_top.addWidget(btn_guide)
-        layout_top.addWidget(btn_quit)
+        # layout_top.addWidget(btn_guide)
+        # layout_top.addWidget(btn_quit)
+        # layout_top.addWidget(lb_top)
+        
+        layout_bottom.addWidget(btn_guide)
+        layout_bottom.addWidget(btn_quit)
+        layout_bottom.addWidget(lb_top)
         
         # 메인 레이아웃에 모든 프레임을 추가
         main_layout.addWidget(frame_top)
+        main_layout.addWidget(frame_bottom)
         
         # 각 버튼에 콜백함수 연결
         btn_guide.clicked.connect(self.showGuideFunction)
         btn_quit.clicked.connect(self.quitFunction)
         
+def main():
+    file=open('./ref/qt_man.css','r',encoding='utf-8')
+    stylesheet=file.read()
     
-app = QApplication(sys.argv)
-win = DigitCapture()
-win.show()
-app.exec_()
+    app = QApplication(sys.argv)
+    win = DigitCapture()
+    win.setStyleSheet(stylesheet)
+    win.show()
+    app.exec_()
 
-
+main()
 

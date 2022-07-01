@@ -40,11 +40,11 @@ class Imageprocessor:
             plt.imshow(img, cmap='gray'), plt.xticks([]), plt.yticks([])
             plt.show()
         
-    def crop(self, cv_img, init_n, img_n, crop_fx1, crop_fx2, y2):
+    def crop(self, cv_img, cut, crop_n, crop_fx1, crop_fx2, y2):
         
-        i=init_n               # 원본 이미지 절단 
-        n=img_n                # 생성할 분할 이미지 수 (1/n)
-        fx1=crop_fx1           # 분할 조절
+        i=cut                   # 원본 이미지 절단 
+        n=crop_n                # 생성할 분할 이미지 수 (1/n)
+        fx1=crop_fx1            # 분할 조절
         fx2=crop_fx2
        
         # OpenCV -> PIL
