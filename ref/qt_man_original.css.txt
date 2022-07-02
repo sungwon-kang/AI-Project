@@ -1,0 +1,285 @@
+/*  ---------------------------- ALL OTHERS WIDGETS ---------------------------- */
+* {
+    font-weight: normal;
+    font-family: Gadugi;
+    selection-background-color: rgb(67, 128, 179);
+    selection-color: rgb(255, 255, 255);
+}
+
+
+/*  ---------------------------- focus ---------------------------- */
+    *:focus {
+        outline-width: 1px;
+        outline-style: solid;
+        outline-color: #e60000;
+    }
+
+QPushButton:focus {
+    outline: 2px solid #e60000;
+}
+
+QComboBox:focus {
+    border: 1px solid #e60000;
+}
+
+QLineEdit:focus {
+    border: 1px solid #e60000;
+}
+
+QTableWidget:focus {
+    border: 1px solid #e60000;
+}
+
+
+
+/*  ---------------------------- MAIN WINDOW, WIDGET ---------------------------- */
+QMainWindow, QWidget {
+    color: rgb(0,0,0);
+    background: rgb(255,255,255);
+}
+
+/*  ---------------------------- Q TAB BAR ---------------------------- */
+QTabBar::tab {
+    background: rgb(230, 230, 230);
+    color: rgb(40, 40, 40);
+    border: solid rgb(200, 200, 200);
+    border-width: 0 0 0 1px;
+}
+
+QTabBar::tab:hover {
+    background: rgb(0,115,170);
+    color: rgb(250,250,250);
+    font-weight: bold;
+}
+
+QTabBar::tab:selected {
+    font-weight: bold;
+    background: rgb(250, 250, 250);
+    color: rgb(20, 20, 20);
+    border: solid rgb(0,150,255);
+    border-width: 0 0 2px 0;
+}
+
+
+
+/*-----------------------------------------------------------------
+------------------------------ LINE_EDIT --------------------------
+------------------------------ TEXT BROWSER -----------------------
+------------------------------ TEXT_EDIT---------------------------
+------------------------------ PLAIN_TEXT -------------------------
+------------------------------------------------------------------- */
+QLineEdit, QTextBrowser, QTextEdit, QPlainTextEdit {
+    color: rgb(20,20,20);
+    background-color: white;
+    border: 1px solid lightgrey;
+}
+
+QLineEdit:disabled {
+    background-color: rgb(210, 210, 210);
+    color: rgb(90, 90, 90);
+}
+
+/*  ---------------------------- COMBO BOX ----------------------------*/
+QComboBox {
+    background-color: rgb(255, 255, 255);
+    border: 1px solid rgb(0,115,170);
+    min-height: 5px;
+}
+
+QComboBox:disabled {
+    background-color: rgb(210, 210, 210);
+    color: rgb(90, 90, 90);
+    border: solid lightgray;
+}
+
+QComboBox:hover {
+    color: rgb(0,115,170);
+    background-color: white;
+    border: 2px solid lightgrey;
+}
+
+QComboBox::drop-down {
+    width: 5px;
+    background-color: rgb(0,115,170);
+}
+
+QComboBox::QAbstractItemView {
+    color: black;
+    border: 1px solid lightgrey;
+}
+
+
+/* -------------------------------- CHECK BOX ----------------------------------------- */
+QCheckBox {
+    background: rgb(255, 255, 255);
+    color: rgb(30,30,30);
+}
+
+/* -------------------------------- LABEL ----------------------------------------- */
+QLabel {
+    color: rgb(20,20,20);
+}
+
+/*  ---------------------------- PUSHBUTTON ---------------------------- */
+QPushButton {
+    border: solid lightgray;
+    color: white;
+    background: rgb(0,115,170);
+}
+
+    QPushButton:disabled {
+        background-color: rgb(210, 210, 210);
+        color: rgb(90, 90, 90);
+        border: solid lightgray;
+    }
+
+    QPushButton:hover {
+        color: black;
+        background: lightgrey;
+    }
+
+QScrollBar::handle:vertical:pressed {
+    color: white;
+    background: rgb(0, 53, 100);
+}
+
+    QPushButton:pressed {
+        color: white;
+        background: rgb(0, 53, 100);
+    }
+
+/*  ---------------------------- TABLE_LIST_TABLE ---------------------------- */
+QTableWidget QTableCornerButton::section {
+    background-color: rgb(255, 255, 255);
+}
+
+QTableWidget {
+    color: rgb(20, 20, 20);
+    alternate-background-color: rgb(240, 250, 255);
+}
+
+QTableWidget::item {
+    color: rgb(20, 20, 20);
+}
+
+QHeaderView::section {
+    border-top: 0px solid #e6e6e6;
+    border-left: 0px solid #e6e6e6;
+    border-right: 1px solid #e6e6e6;
+    border-bottom: 1px solid #e6e6e6;
+    background-color: white;
+    padding-top: 5px;
+    padding-left: 6px;
+    padding-bottom: 1px;
+}
+
+QTableCornerButton::section {
+    border-top: 0px solid #e6e6e6;
+    border-left: 0px solid #e6e6e6;
+    border-right: 1px solid #e6e6e6;
+    border-bottom: 1px solid #e6e6e6;
+    background-color: white;
+}
+
+
+
+
+
+/* --------------------------------- SCROLLBAR HORIZONTAL --------------------------------------  */
+QScrollBar:horizontal {
+    height: 8px;
+    background: white;
+}
+
+QScrollBar::groove:horizontal {
+    background: white;
+}
+
+QScrollBar::sub-page:horizontal, QScrollBar::add-page:horizontal {
+    height: 10px;
+    background: rgb(255, 255, 255);
+}
+
+QScrollBar::handle:horizontal {
+    background: rgb(0,115,170);
+}
+
+QScrollBar::handle:horizontal:hover {
+    color: white;
+    background: lightgrey;
+}
+
+QScrollBar::handle:horizontal:pressed {
+    color: white;
+    background: rgb(0, 53, 100);
+}
+
+/* --------------------------------------- SCROLLBAR VERTICAL ----------------------------------------------  */
+
+/* SCROLLBAR */
+QScrollBar:vertical {
+    width: 8px;
+    background: white;
+    margin: 11px 0 11px 0;
+}
+/* HANDLE*/
+QScrollBar::handle:vertical {
+    background: rgb(0,115,170);
+    min-height: 20px;
+}
+
+QScrollBar::handle:vertical:hover {
+    color: white;
+    background: lightgrey;
+}
+
+QScrollBar::handle:vertical:pressed {
+    color: white;
+    background: rgb(0, 53, 100);
+}
+/* UP ARROW, DOWN ARROW */
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {
+    width: 10px;
+    height: 10px;
+}
+
+/* UP BUTTON */
+QScrollBar::sub-line:vertical {
+    background: rgb(0,115,170);
+    height: 10px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}
+/* DOWN BUTTON */
+QScrollBar::add-line:vertical {
+    background: rgb(0,115,170);
+    height: 10px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+/* SUBPAGES - ADDPAGE */
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+
+/* -----------------------------------------------QMessageBox------------------------------------------- */
+QMessageBox QPushButton {
+    color: white;
+    background: rgb(0,115,170);
+    width: 40px;
+    min-height: 17px;
+}
+
+
+QMessageBox QPushButton:hover {
+}
+
+QMessageBox QPushButton:pressed {
+}
+
+QMessageBox QLabel {
+}
+
+
+/* -----------------------------------------------QCustomPlot------------------------------------------- */
