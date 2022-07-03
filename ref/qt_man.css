@@ -1,0 +1,91 @@
+
+/*  ---------------------------- ALL OTHERS WIDGETS ----------------------------*/
+* {
+    font-weight: normal;
+    font-family: 'Malgun Gothic';
+    selection-background-color: rgb(67, 128, 179);
+    selection-color: rgb(255, 255, 255);
+}
+
+
+/*  ---------------------------- focus ---------------------------- */
+    *:focus {
+        outline-width: 1px;
+        outline-style: solid;
+        outline-color: #e60000;
+    }
+    
+/*  ---------------------------- MAIN WINDOW, WIDGET ---------------------------- */
+QMainWindow{
+    background: rgb(255,255,255);
+    font-family: 'Malgun Gothic';
+}
+
+Widgets{
+    font-family: 'Malgun Gothic';
+}
+/*-----------------------------------------------------------------
+------------------------------ LINE_EDIT --------------------------
+------------------------------ TEXT BROWSER -----------------------
+------------------------------ TEXT_EDIT---------------------------
+------------------------------ PLAIN_TEXT -------------------------
+------------------------------------------------------------------- */
+QLineEdit, QTextBrowser, QTextEdit, QPlainTextEdit {
+    color: rgb(20,20,20);
+    background-color: white;
+    border: 1px solid lightgrey;
+}
+
+QLineEdit:disabled {
+    background-color: rgb(210, 210, 210);
+    color: rgb(90, 90, 90);
+}
+
+QTextEdit:disabled {
+    background-color: rgb(210, 210, 210);
+    color: rgb(90, 90, 90);
+}
+
+/* -------------------------------- LABEL ----------------------------------------- */
+QLabel {
+    color: rgb(0,0,0);
+    font-size: 12px;
+}
+
+/*  ---------------------------- PUSHBUTTON ---------------------------- */
+QPushButton {
+    border: solid lightgray;
+    color: white;
+    background: rgb(0,115,170);
+    font-weight: bold;
+}
+
+    QPushButton:disabled {
+        background-color: rgb(210, 210, 210);
+        color: rgb(90, 90, 90);
+        border: solid lightgray;
+    }
+
+    QPushButton:hover {
+        color: black;
+        background: lightgrey;
+    }
+
+ 
+QMessageBox QPushButton {
+    color: rgb(255,255,255);
+    background: rgb(0,115,170);
+    width: 50px;
+    min-height: 20px;
+}
+
+
+QMessageBox QPushButton:hover {
+}
+
+QMessageBox QPushButton:pressed {
+}
+
+QMessageBox QLabel {
+     color: black;
+}
