@@ -1,4 +1,0 @@
-실행파일(exe) - https://wikidocs.net/21952
-
-pyinstaller -w -F --add-data="C:\Users\Gaming_\anaconda3\envs\aip\Lib\site-packages\tensorflow;." CookieDigitCapture.py
-을 추가해야함
