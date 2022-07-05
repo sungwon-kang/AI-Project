@@ -1,393 +1,328 @@
-import sys
+import cv2 as cv
 import numpy as np
-
-import pyautogui    # mouse, keyboard 관련 도구함 끌어오기
-import pyperclip    # 클립보드에 저장 혹은 클립보드에서 불러오기 위함
+import tensorflow as tf
 import Imageprocessor as ip
 
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt,QTimer
 from PyQt5.QtGui import *
+import sys
+
+import pyautogui    # mouse, keyboard 관련 도구함 끌어오기
+import pyperclip    # 클립보드에 저장 혹은 클립보드에서 불러오기 위함
+import time
 
 from tensorflow.keras.models import load_model
+IP=ip.Imageprocessor()
 
-IP = ip.Imageprocessor()
+# 임시 라이브러리
+from datetime import datetime 
+import os
+#%%
+# 처리 순서
+# 1. 이미지 재조정
+# 2. 전처리
+# 3. 예측
+# 4. 숫자연결
+# 5. 반환
+'''
+	Ver0.1 시나리오
+	[캡처 기능]
+		1. 임의의 마우스 위치에서 임의의 단축키를 눌러 좌표를 찍는다.
+		2. (2)의 행동을 한번 더 찍어 (x1,x2,y1,y2)를 얻고 임의의 단축키를 눌러 숫자 이미지를 캡처한다.
+        3. 종료 단축키를 누르지 않을 시, 1번을 반복 수행할 수 있다. 종료 단축키를 누르면 캡처 기능이 멈춘다.
+        
+	[분할 이후 전처리 기능]
+		1. 얻은 이미지를 한 자릿수로 인식할 수 있도록 분할한다.
+		2. 분할한 이미지들을 저장한다.
+		3. 분할한 이미지들을 모델의 입력 데이터 형태로 변화하고 인식을 수행한다.
+
+	[기록]
+		1. 한 자릿수 분할한 이미지와 인식의 결과를 기록한다. ( argmax 후 .txt )
+		2. 저장된 이미지와 인식 결과를 가지고 정확도 계산에 쓴다.
+    
+    [나가기]
+'''
 #%%
 class DigitCapture(QMainWindow):
     
-    # P1 좌표 변수
-    x1=0
-    x2=0
+    x1=-1
+    x2=-1
     
-    # P2 좌표 변수
-    y1=0
-    y2=0
+    y1=-1
+    y2=-1
     
-    # 탐색할 전투력 최대값
-    Max=0
+    refresh_x=0
+    refresh_y=0
     
-    # P1, P2 각각 쌍으로 저장하는 리스트
+    gui_x=0
+    gui_y=0
+    
+    Thread_flag=True
+    
+    keyFlag=True
+    tmp_DateName=None
+    tmp_fileName=None
+    tmp_predicted_lst=[]
+    
     saved_p1_cord=[]
     saved_p2_cord=[]
     
-    # 키 이벤트 락
-    keyFlag=True
-    
-    captured_img=None       # 캡쳐 이미지 객체
-    proceed_imgs=[]         # 분할된 이미지를 전처리된 이미지를 저장하는 이미지 리스트
-    predicted_list=[]       # 예측된 수들을 저장하는 리스트
-    
-    WindowWidth=600
-    WindowHeight=450
-    
     def __init__(self):
-        
-        # 메인 윈도우 초기화
+        # 메인 윈도우 창 크기와 타이틀 지정
         super().__init__()
-        self.setWindowTitle('Auto Arena[cookie]')
-        self.setGeometry(200, 200, self.WindowWidth, self.WindowHeight)
-        self.setFixedSize(self.WindowWidth, self.WindowHeight)
+        self.setWindowTitle('Auto Arena Generator')
+        self.setGeometry(200, 200, 420, 100)
+        self.setFixedSize(420, 100)
         
-        # UI 초기화
+        self.lb_event = QLabel('사용법을 확인하세요!',self)
         self.setUI()
         
-        # 학습 모델 불러오기
         self.cnn=load_model('./0_models/cnn_v5.h5')
+        self.ext='.jpg'
+        # 임시 변수, 삭제할 예정
+        self.tmp_imgpath='./3_CaptureSample/2022-07-05/'
+        self.tmp_savepath='./3_CaptureSample/2022-07-05/'       
+        
+        self.timer=QTimer()
+        self.timer.timeout.connect(self.autoCaptureFunction)
         
     # 키 이벤트 캡처 기능
     def keyPressEvent(self, e):
-        # 키 입력 제한 리스트
-        printable=[Qt.Key_Q, Qt.Key_W, Qt.Key_A, 
-                   Qt.Key_E, Qt.Key_C, Qt.Key_X]
-        
-        # 입력 키 가져오기
+        printable=[Qt.Key_Q, Qt.Key_W, Qt.Key_A,
+                   Qt.Key_E, Qt.Key_C, Qt.Key_M,
+                   Qt.Key_N]
         key=e.key()
+        
         if(self.keyFlag==True and key in printable):
             if key == Qt.Key_Q:
-                # 마우스 포인터 좌표 불러오기
                 self.x1, self.y1 = pyautogui.position()
                 
                 print("위치 값 ({}, {})\n".format(self.x1,self.y1))
                 self.setText("위치 입력 (x1, y1) ({}, {})".format(self.x1,self.y1))
             
             elif key == Qt.Key_W:
-                # 마우스 포인터 좌표 불러오기
                 self.x2, self.y2 = pyautogui.position()
                 
                 print("위치 값 ({}, {})\n".format(self.x2,self.y2))
                 self.setText("위치 입력 (x2, y2) ({}, {})".format(self.x2,self.y2))
+            
+            elif key == Qt.Key_N:
+                self.gui_x, self.gui_y = pyautogui.position()
                 
+                print("프로그램 클릭 위치 값 ({}, {})\n".format(self.gui_x, self.gui_y))
+                self.setText("프로그램 위치 ({}, {})\n".format(self.gui_x, self.gui_y))
+                
+            elif key == Qt.Key_M:
+                self.refresh_x, self.refresh_y = pyautogui.position()
+                
+                print("새로고침 위치 값 ({}, {})\n".format(self.refresh_x, self.refresh_y))
+                self.setText("새로고침 위치 ({}, {})\n".format(self.refresh_x, self.refresh_y))
             elif key == Qt.Key_A: 
-                # 저장된 좌표 P1, P2 리스트에 추가
                 self.saved_p1_cord.append((self.x1,self.y1))
                 self.saved_p2_cord.append((self.x2,self.y2))
                 
                 print(self.saved_p1_cord)
                 print(self.saved_p2_cord)
-                self.setText("리스트 추가됨 \np1 - "+str(self.saved_p1_cord) +"\np2 - "+ str(self.saved_p2_cord))
+                self.setText("리스트 추가됨 "+str(self.saved_p1_cord) + str(self.saved_p2_cord))
             
             elif key == Qt.Key_C:
-                # 좌표 리스트 초기화
                 self.saved_p1_cord.clear()
                 self.saved_p2_cord.clear()
                 print("list clear")
                 self.setText("리스트 초기화됨")
                 
             elif key == Qt.Key_E:
-                self.CaptureFunction()
+                l1=len(self.saved_p1_cord)
+                l2=len(self.saved_p2_cord)
+                if( ( l1>0 and l2 > 0) and (l1 == l2) ):
+                    for i in range(l1):
+                        (x1,y1)=self.saved_p1_cord[i]
+                        (x2,y2)=self.saved_p2_cord[i]
+                        print("두 위치 ({}, {}), ({}, {})".format(x1,y1,x2,y2))
+
+                        sorted_x_value = sorted([x1, x2])
+                        sorted_y_value = sorted([y1, y2])
+                        width = sorted_x_value[1] - sorted_x_value[0]
+                        height = sorted_y_value[1] - sorted_y_value[0]
+
+                        x_re = sorted_x_value[0] - 20
+                        y_re = sorted_y_value[0] - 20
+                        width_re = width + 40
+                        height_re = height + 40
+                                                  
+                        print("영역 : ({}, {}, {}, {})\n".format(x_re, y_re, width_re, height_re))
+                        pyperclip.copy("({}, {}, {}, {})".format(x_re, y_re, width_re, height_re))
                 
-            elif key == Qt.Key_X:
-                self.quitFunction()
-                    
-    def CaptureFunction(self):
-        # 모니터 스크린샷 가져오기
-        l1=len(self.saved_p1_cord)
-        l2=len(self.saved_p2_cord)       
-        if( ( l1>0 and l2 > 0) and (l1 == l2) ):
-            n = len(self.saved_p1_cord)
-            self.keyFlag=False
-            
-            # 추가된 좌표 쌍 갯수 만큼 반복
-            for i in range(n):
-                (x1,y1)=self.saved_p1_cord[i]
-                (x2,y2)=self.saved_p2_cord[i]
-                print("두 위치 ({}, {}), ({}, {})".format(x1,y1,x2,y2))
-                
-                # 좌표 정렬 후 차이를 구하여 너비와 높이를 계산
-                sorted_x_value = sorted([x1, x2])
-                sorted_y_value = sorted([y1, y2])
-                width = sorted_x_value[1] - sorted_x_value[0]
-                height = sorted_y_value[1] - sorted_y_value[0]
-                
-                x_re = sorted_x_value[0] - 20
-                y_re = sorted_y_value[0] - 20
-                width_re = width + 40
-                height_re = height + 40
-                                         
-                print("영역 : ({}, {}, {}, {})\n".format(x_re, y_re, width_re, height_re))
-                pyperclip.copy("({}, {}, {}, {})".format(x_re, y_re, width_re, height_re))
+                        if 'x_re' in locals(): # 메모리 변수 속에 있는 것을 불러오기. 따라서 x_re이 있어야 함.
+                            self.tmp_DateName=datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')
+                            self.CaptureScreen(sorted_x_value, sorted_y_value, width, height)
+                            # print(self.tmp_DateName)
+                        self.setText("예측 끝")                            
+   
+    def CaptureScreen(self, sorted_x_value, sorted_y_value, width, height):
+        # ver0.1 아닌 버전은 삭제할 것
+        # E를 누를 시 저장된 좌표에 맞춰 캡쳐
+        self.tmp_fileName = self.tmp_imgpath+self.tmp_DateName+'/cap_'+self.tmp_DateName+self.ext
         
-                if 'x_re' in locals(): # 메모리 변수 속에 있는 것을 불러오기.
-                    self.captured_img=pyautogui.screenshot(region=(sorted_x_value[0], sorted_y_value[0], width, height))
-                    print("좌표대로 이미지 저장")
-                    
-                    # 전처리 함수 호출
-                    self.processingFunction()
-            
-            self.te_event.append("예측된 수: "+str(self.predicted_list))
-            self.te_event.append("\n나보다 낮은 전투력들: "+str(self.findInList(self.predicted_list)))
-            self.predicted_list.clear()
-            
-            # 끝나고 key 락 풀기
-            self.keyFlag=True
-            
-    def resetFunction(self):
-        self.le_cut.setText('1')
-        self.le_crop_n.setText('7')
-        self.le_fx1.setText('0')
-        self.le_fx2.setText('0')
-    
-    def processingFunction(self):
-        # 분할 함수 호출
-        dvi, n, fx1, fx2=self.getParameterTopLine()
-        cropped_imgs=IP.crop(cv_img=self.captured_img, cut=dvi, crop_n=n, crop_fx1=fx1, crop_fx2=fx2)
-        print("이미지 분할 완료")
+        print(self.tmp_fileName)
+        os.mkdir(self.tmp_imgpath+self.tmp_DateName)
         
-        # 각 분할된 이미지들을 전처리
-        for crop_img in cropped_imgs:
-            img = IP.preprocessing(crop_img)
-            self.proceed_imgs.append(img)
-        print("이미지 전처리 완료")
-        
-        # 예측 함수
+        img=pyautogui.screenshot(self.tmp_fileName ,region=(sorted_x_value[0], sorted_y_value[0], width, height))
+        self.setText("좌표대로 이미지 저장됨")
+        print(img)
+        # 삭제할 것
+        self.processingFunction()
         self.predictFunction()
+        self.saveFunction()
+        
+        
+    def processingFunction(self):
+        # 다이알로그를 이용하거나 상대경로로 지정할 예정
+        img=cv.imread(self.tmp_fileName)
+        # 입력 박스에서 매개변수를 받아오도록 구현할 예정
+        Savepath=str(self.tmp_savepath+self.tmp_DateName)
+        cropped_imgs=IP.crop(Savepath, cv_img=img, init_n=1, img_n=7, crop_fx1=0, crop_fx2=0,y2=28)
+        
+        
+        # 삭제할 것
+        i=0
+        tmp_Imglist=[]            
+        for img in cropped_imgs:
+            proceed_img=IP.preprocessing(img,self.tmp_DateName,i)
+            
+            # 삭제할 것
+            tmp_Imglist.append(proceed_img)
+            i+=1
+        self.proceed_imgs=np.array(tmp_Imglist, dtype=IP.Data_type)
+        self.setText("이미지 전처리 작업 끝")
         
     def predictFunction(self):
         
         if len(self.proceed_imgs)==0:
             self.setText("등록된 이미지가 없습니다.")
-        else:    
-            self.Max = self.getParameterMiddleLine()
-            # 처리된 이미지들을 모델 입력 데이터 형태로 변환
-            proceed_imgs=IP.listToArray(self.proceed_imgs,'float32')
-            res=self.cnn.predict(proceed_imgs)           
-            
-            # 각 자릿수를 계산
-            pred_num=0
+        else:
+            res=self.cnn.predict(self.proceed_imgs)           
+            num=0
             n_digit = len(res)-1
             for digit in res:
-                # 예측된 확률 중 가장 큰 인덱스를 가져옴
                 predicted_num=np.argmax(digit)
                 
-                # 자릿수 연결
-                pred_num+=predicted_num*(10**n_digit)
+                num+=predicted_num*(10**n_digit)
                 n_digit=n_digit-1
                 
-                # 예측된 각 수를 출력
+                self.tmp_predicted_lst.append(predicted_num)
                 print(predicted_num)
             
-            # 예측된 수 추가
-            self.setText("[예측결과]")
-            self.predicted_list.append(pred_num)            
-            print("예측 값:", pred_num)
+            self.setText("예측된 값 "+str(num))
+    
+    def saveFunction(self):
+        with open(str(self.tmp_savepath+'labels.txt'), 'a') as File:
+            for i in range (7):
+                filename=self.tmp_DateName+'['+str(i)+'].jpg'+'\t\t'+str(self.tmp_predicted_lst[i])+'\t\n'
+                File.write(filename)
+                print('추가됨 :' + self.tmp_DateName+'['+str(i)+'].jpg', self.tmp_predicted_lst[i])
             
-            self.proceed_imgs.clear()
-            
+            File.write("===========================\n")
+            self.tmp_predicted_lst.clear()
+            File.close()
         
-        # 여기까지가 하나 이미지에 대한 예측 끝
-        # 작업할 좌표 리스트이 남아있다면 103번 줄로 재진행
-    # btn_guide(사용법) 이벤트 함수
+        self.setText("정상적으로 저장완료")
+    
+    def threadFunction(self):
+        ms=1000
+        
+        if self.Thread_flag==True:
+            self.timer.start(610*ms)
+            self.Thread_flag=False
+        
+        else:
+            self.timer.stop()
+            self.Thread_flag=True
+            
+    def autoCaptureFunction(self):
+        pyautogui.click(self.refresh_x, self.refresh_y)
+        time.sleep(1)
+        pyautogui.click(self.gui_x,self.gui_y)
+        time.sleep(1)
+        pyautogui.press("e")
+        
+    # btn_guide(사용법) 이벤트 함수    
     def showGuideFunction(self):
-        QMessageBox.information(self, '사용법', 
-                                '[단축키]\n'+
+        QMessageBox.information(self, '사용법', '[단축키]\n'+
                                 '  <Q>를 누를 시 마우스 포인터 기준으로 x1, y1이 저장됩니다.\n'+
                                 '  <W>를 누를 시 마우스 포인터 기준으로 x2, y2이 저장됩니다.\n'+
                                 '  <A>를 누를 시 <Q>와 <W>를 얻은 좌표를 리스트에 추가합니다.\n'+
                                 '  <E>를 누를 시 수를 예측합니다.\n'+
-                                '  <X>를 누를 시 프로그램이 종료됩니다.\n\n'+
-                                
+                                '  <M>을 눌러 무료 새로고침 버튼의 좌표 저장하세요.\n'
+                                '  <N>을 눌러 생성기 프로그램의 빈 공간에 좌표를 저장하세요.\n\n'
                                 '[사용법]\n'+
                                 '  1. <Q>와 <W>를 눌러 사각형 좌표를 얻고 <A>를 눌러 리스트에 추가합니다.\n'+
                                 '  2. (1)을 반복해서 여러 좌표를 얻을 수 있습니다.\n'+
-                                '  3. <E> 또는 [시작] 버튼을 눌러 리스트에 저장된 좌표 쌍의 수만큼 캡쳐되고, \t\t수를 예측합니다.\n'
+                                '  3. <E>를 눌러 리스트에 저장된 좌표 쌍의 수만큼 캡처되고, 수를 예측합니다.\n'
                                 '  4. 예측된 수가 UI에 출력됩니다.\n\n'
-                                
-                                '[설정]\n'+
-                                ' 캡쳐 이미지 절단: 캡쳐 이미지를 얻어올 때, \n\t\t이미지를 1/n하여 얻어오는 설정값 (기본값 :1)\n'
-                                ' 분할 이미지 왼쪽 너비 조절: 각 분할 이미지의 \n\t좌변 너비 크기 설정값 (기본값 :0)\n'
-                                ' 분할 이미지 오른쪽 너비 조절: 각 분할 이미지의 \n\t우변 너비 크기 설정값 (기본값 :0)\n'
-                                ' 분할 수: 캡쳐 이미지 분할 수 설정값 (기본값 :7)\n'
+                                '[타이머 자동 사용법]\n'
+                                ' 진행 : 마우스를 M의 좌표 이동 후 클릭 -> 예측(E와 같은 기능) -> '+
+                                '마우스를 N의 좌표로 이동 후 클릭 -> 615초 후 이전 과정을 반복\n'
+                                ' 1. [사용법] (1), (2)을 수행합니다.\n'
+                                ' 2. N와 M의 좌표를 저장합니다.\n'
+                                ' 3. [자동시작] 버튼을 눌러 데이터 자동생성을 시작하세요. [멈춤] 버튼을 제공합니다.\n\n'
+                                '[자동 사용시 유의사항]\n'
+                                ' - 숫자 데이터를 추출할 프로그램과 생성기 프로그램을 항상 모니터위에 보이도록 배치 해야합니다.\n'
+                                ' - 두 프로그램이 서로 화면에 교차되더라도 마우스 N과 M 좌표는 서로 겹쳐지지 않게 배치 해야합니다.\n'
                                 )
-    
-    # btn_quit[나가기] 이벤트 함수    
+    #btn_quit[나가기] 이벤트 함수    
     def quitFunction(self):
         self.close()
-    
-    def findInList(self, lst):
-        lst = [i for i in lst if i <= self.Max]
-        return lst
-    
-    def getParameterTopLine(self):
-        cut = int(self.le_cut.text())
-        crop_n = int(self.le_crop_n.text())
-        crop_fx1 = int(self.le_fx1.text())
-        crop_fx2 = int(self.le_fx2.text())
         
-        return cut, crop_n, crop_fx1, crop_fx2
-    
-    def getParameterMiddleLine(self):
-        # myPower = int(self.le_myPower.text())
-        Max = int(self.le_EnemyMaxPower.text())
-        
-        return Max
-    
-        self.close
     def setText(self, msg):
-        self.te_event.clear()
-        self.te_event.setText(msg)
+        self.lb_event.clear()
+        self.lb_event.setText(msg)
         
     def setUI(self):
         # 프레임과 레이아웃 선언
         frame_top = QFrame(self)
-        frame_top.setGeometry(0, 0, self.WindowWidth, 150)
+        frame_top.setGeometry(0,0,450,150)
         frame_top.setFrameShape(QFrame.Box | QFrame.Plain)
-        
-        frame_bottom = QFrame(self)
-        frame_bottom.setGeometry(0, 149, self.WindowWidth, 150)
-        frame_bottom.setFrameShape(QFrame.Box | QFrame.Plain)
-        
-        main_layout=QVBoxLayout()
-        layout_top =QVBoxLayout()
-        layout_middle =QVBoxLayout()
-        layout_bottom=QVBoxLayout()
-        
-        # 상단 위젯
-        lb_top = QLabel('기본 설정', self)
-        lb_top.setStyleSheet("font-weight: bold;"
-                             "font-size: 20px"
-                             )
-        lb_top.setAlignment(Qt.AlignCenter)        
-        
-        lb_cut = QLabel('원본 이미지 절단', self)
-        self.le_cut = QLineEdit(self)
-        self.le_cut.setValidator(QIntValidator(1, 10, self))# 1 ~ 10 사이의 정수 입력
-        self.le_cut.setPlaceholderText("1")
-        
-        self.le_cut.setAlignment(Qt.AlignCenter)
-        
-        lb_crop_n = QLabel('분할 수', self)
-        self.le_crop_n = QLineEdit(self)
-        self.le_crop_n.setValidator(QIntValidator(self))
-        self.le_crop_n.setPlaceholderText("7")
-        self.le_crop_n.setAlignment(Qt.AlignCenter)
-        
-        lb_fx1 = QLabel('분할 이미지 왼쪽 너비 간격', self)
-        self.le_fx1 = QLineEdit(self)
-        self.le_fx1.setPlaceholderText("0")
-        self.le_fx1.setAlignment(Qt.AlignCenter)
-        
-        lb_fx2 = QLabel('분할 이미지 오른쪽 너비 간격', self)
-        self.le_fx2 = QLineEdit(self)  
-        self.le_fx2.setPlaceholderText("0")
-        self.le_fx2.setAlignment(Qt.AlignCenter)
-        
-        # 초기 설정값
-        self.resetFunction()
-        
-        lb_top.setGeometry(0,0, self.WindowWidth, 30)
-        
-        lb_cut.setGeometry(10,35,130,25)
-        self.le_cut.setGeometry(10, 60, 130, 25)
-        
-        lb_crop_n.setGeometry(175, 35, 130, 25)
-        self.le_crop_n.setGeometry(175, 60, 130, 25)
-        
-        lb_fx1.setGeometry(10, 85, 180, 25)
-        self.le_fx1.setGeometry(10, 110, 130, 25)
     
-        lb_fx2.setGeometry(175, 85, 180, 25)
-        self.le_fx2.setGeometry(175, 110, 130, 25)
+        main_layout=QVBoxLayout()
+        layout_top = QVBoxLayout()
         
-        layout_top.addWidget(lb_top)
-        layout_top.addWidget(self.le_cut)
-        layout_top.addWidget(self.le_crop_n)
-        layout_top.addWidget(self.le_fx1)
-        layout_top.addWidget(self.le_fx2)
+        # 버튼 및 라벨 설정
+        btn_start = QPushButton('자동시작', self)
+        btn_stop = QPushButton('멈춤', self)
         
-        # 중단 위젯
-        lb_middle = QLabel('쿠키런', self)
-        lb_middle.setStyleSheet("font-weight: bold;"
-                             "font-size: 20px")
-        lb_middle.setAlignment(Qt.AlignCenter)
-        
-        lb_myPower = QLabel('내 전투력', self)
-        self.le_myPower = QLineEdit(self)
-        self.le_myPower.setValidator(QIntValidator(self))
-        self.le_myPower.setAlignment(Qt.AlignCenter)
-        self.le_myPower.setText('0')
-        
-        lb_EnemyMaxPower = QLabel('탐색할 상대 전투력 최대치', self)
-        self.le_EnemyMaxPower = QLineEdit(self)
-        self.le_EnemyMaxPower.setValidator(QIntValidator(self))
-        self.le_EnemyMaxPower.setAlignment(Qt.AlignCenter)
-        self.le_EnemyMaxPower.setText('0')
-        
-        lb_middle.setGeometry(0,149,self.WindowWidth, 30)
-        
-        lb_myPower.setGeometry(10,185,130,25)
-        self.le_myPower.setGeometry(10,210,130,25)
-        
-        lb_EnemyMaxPower.setGeometry(175,185,150,25)
-        self.le_EnemyMaxPower.setGeometry(175,210,130,25)
-
-        layout_top.addWidget(lb_middle)
-        layout_middle.addWidget(lb_middle)
-        layout_middle.addWidget(self.le_myPower)
-        layout_middle.addWidget(lb_EnemyMaxPower)
-        layout_middle.addWidget(self.le_EnemyMaxPower)
-
-        
-        # 하단 위젯
-        self.te_event = QTextEdit('사용법을 확인하세요!', self)
-        self.te_event.setReadOnly(True)
-        
-        btn_start = QPushButton('시작(E)', self)
-        btn_reset = QPushButton('설정 초기화',self)
         btn_guide = QPushButton('사용법', self)       
-        btn_quit = QPushButton('종료', self)
-        
-        self.te_event.setGeometry(10, self.WindowHeight-140, 580, 90)
-        btn_start.setGeometry(10, self.WindowHeight-40, 100, 30)
-        btn_reset.setGeometry(120, self.WindowHeight-40, 100, 30)
-        btn_guide.setGeometry(380, self.WindowHeight-40, 100, 30)
-        btn_quit.setGeometry(490, self.WindowHeight-40, 100, 30)
-        
-        layout_bottom.addWidget(self.te_event)
-        layout_bottom.addWidget(btn_start)
-        layout_bottom.addWidget(btn_reset)
-        layout_bottom.addWidget(btn_guide)
-        layout_bottom.addWidget(btn_quit)
+        btn_quit = QPushButton('나가기', self)
+
+        # 각 위젯 위치와 크기 지정 
+        btn_start.setGeometry(10, 10, 100 , 30)
+        btn_stop.setGeometry(110, 10, 100, 30)
+        self.lb_event.setGeometry(10, 70, 410, 25)
+        btn_guide.setGeometry(210, 10, 100, 30)
+        btn_quit.setGeometry(310, 10, 100, 30)
+                  
+
+        #상단 프레임 레이아웃 위젯 추가
+        layout_top.addWidget(btn_start)
+        layout_top.addWidget(btn_stop)
+        layout_top.addWidget(btn_guide)
+        layout_top.addWidget(btn_quit)
         
         # 메인 레이아웃에 모든 프레임을 추가
         main_layout.addWidget(frame_top)
-        main_layout.addWidget(frame_bottom)
         
         # 각 버튼에 콜백함수 연결
-        btn_start.clicked.connect(self.CaptureFunction)
-        btn_reset.clicked.connect(self.resetFunction)
+        btn_start.clicked.connect(self.threadFunction)
+        btn_stop.clicked.connect(self.threadFunction)
         btn_guide.clicked.connect(self.showGuideFunction)
         btn_quit.clicked.connect(self.quitFunction)
         
-        self.te_event.setFocus()
         
-def main():
-    file=open('./ref/qt_man.css','r',encoding='utf-8')
-    stylesheet=file.read()
-    
-    app = QApplication(sys.argv)
-    win = DigitCapture()
-    win.setStyleSheet(stylesheet)
-    win.show()
-    app.exec_()
+app = QApplication(sys.argv)
+win = DigitCapture()
+win.show()
+app.exec_()
 
-main()
+
+

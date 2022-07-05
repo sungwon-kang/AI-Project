@@ -4,12 +4,13 @@ import tensorflow as tf
 import Imageprocessor as ip
 
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt,QTimer
 from PyQt5.QtGui import *
 import sys
 
 import pyautogui    # mouse, keyboard 관련 도구함 끌어오기
 import pyperclip    # 클립보드에 저장 혹은 클립보드에서 불러오기 위함
+import time
 
 from tensorflow.keras.models import load_model
 IP=ip.Imageprocessor()
@@ -51,6 +52,14 @@ class DigitCapture(QMainWindow):
     y1=-1
     y2=-1
     
+    refresh_x=0
+    refresh_y=0
+    
+    gui_x=0
+    gui_y=0
+    
+    Thread_flag=True
+    
     keyFlag=True
     tmp_DateName=None
     tmp_fileName=None
@@ -67,19 +76,22 @@ class DigitCapture(QMainWindow):
         self.setFixedSize(420, 100)
         
         self.lb_event = QLabel('사용법을 확인하세요!',self)
-        # self.lb_
         self.setUI()
         
         self.cnn=load_model('./0_models/cnn_v5.h5')
         self.ext='.jpg'
         # 임시 변수, 삭제할 예정
-        self.tmp_imgpath='./3_CaptureSample/2022-06-29/'
-        self.tmp_savepath='./3_CaptureSample/2022-06-29/'       
+        self.tmp_imgpath='./3_CaptureSample/2022-07-04/'
+        self.tmp_savepath='./3_CaptureSample/2022-07-04/'       
         
+        self.timer=QTimer()
+        self.timer.timeout.connect(self.autoCaptureFunction)
         
     # 키 이벤트 캡처 기능
     def keyPressEvent(self, e):
-        printable=[Qt.Key_Q, Qt.Key_W, Qt.Key_A, Qt.Key_E, Qt.Key_C]
+        printable=[Qt.Key_Q, Qt.Key_W, Qt.Key_A,
+                   Qt.Key_E, Qt.Key_C, Qt.Key_M,
+                   Qt.Key_N]
         key=e.key()
         
         if(self.keyFlag==True and key in printable):
@@ -94,7 +106,18 @@ class DigitCapture(QMainWindow):
                 
                 print("위치 값 ({}, {})\n".format(self.x2,self.y2))
                 self.setText("위치 입력 (x2, y2) ({}, {})".format(self.x2,self.y2))
+            
+            elif key == Qt.Key_N:
+                self.gui_x, self.gui_y = pyautogui.position()
                 
+                print("프로그램 클릭 위치 값 ({}, {})\n".format(self.gui_x, self.gui_y))
+                self.setText("프로그램 클릭 값 ({}, {})\n".format(self.gui_x, self.gui_y))
+                
+            elif key == Qt.Key_M:
+                self.refresh_x, self.refresh_y = pyautogui.position()
+                
+                print("새로고침 위치 값 ({}, {})\n".format(self.refresh_x, self.refresh_y))
+                self.setText("새로고침 위치 값 ({}, {})\n".format(self.refresh_x, self.refresh_y))
             elif key == Qt.Key_A: 
                 self.saved_p1_cord.append((self.x1,self.y1))
                 self.saved_p2_cord.append((self.x2,self.y2))
@@ -135,11 +158,11 @@ class DigitCapture(QMainWindow):
                             self.tmp_DateName=datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')
                             self.CaptureScreen(sorted_x_value, sorted_y_value, width, height)
                             # print(self.tmp_DateName)
-                                                
+                        self.setText("예측 끝")                            
+   
     def CaptureScreen(self, sorted_x_value, sorted_y_value, width, height):
         # ver0.1 아닌 버전은 삭제할 것
         # E를 누를 시 저장된 좌표에 맞춰 캡쳐
-        
         self.tmp_fileName = self.tmp_imgpath+self.tmp_DateName+'/cap_'+self.tmp_DateName+self.ext
         
         print(self.tmp_fileName)
@@ -149,16 +172,17 @@ class DigitCapture(QMainWindow):
         self.setText("좌표대로 이미지 저장됨")
         print(img)
         # 삭제할 것
-        # self.processingFunction()
-        # self.predictFunction()
-        # self.saveFunction()
+        self.processingFunction()
+        self.predictFunction()
+        self.saveFunction()
+        
         
     def processingFunction(self):
         # 다이알로그를 이용하거나 상대경로로 지정할 예정
         img=cv.imread(self.tmp_fileName)
         # 입력 박스에서 매개변수를 받아오도록 구현할 예정
         Savepath=str(self.tmp_savepath+self.tmp_DateName)
-        cropped_imgs=IP.crop(Savepath, cv_img=img, init_n=1, img_n=7, crop_fx1=-4, crop_fx2=0,y2=28)
+        cropped_imgs=IP.crop(Savepath, cv_img=img, init_n=1, img_n=7, crop_fx1=0, crop_fx2=0,y2=28)
         
         
         # 삭제할 것
@@ -204,25 +228,53 @@ class DigitCapture(QMainWindow):
             File.close()
         
         self.setText("정상적으로 저장완료")
-    # btn_guide(사용법) 이벤트 함수    
     
+    def threadFunction(self):
+        ms=1000
+        
+        if self.Thread_flag==True:
+            self.timer.start(610*ms)
+            self.Thread_flag=False
+        
+        else:
+            self.timer.stop()
+            self.Thread_flag=True
+            
+    def autoCaptureFunction(self):
+        pyautogui.click(self.refresh_x, self.refresh_y)
+        time.sleep(1)
+        pyautogui.click(self.gui_x,self.gui_y)
+        time.sleep(1)
+        pyautogui.press("e")
+        
+    # btn_guide(사용법) 이벤트 함수    
     def showGuideFunction(self):
         QMessageBox.information(self, '사용법', '[단축키]\n'+
                                 '  <Q>를 누를 시 마우스 포인터 기준으로 x1, y1이 저장됩니다.\n'+
                                 '  <W>를 누를 시 마우스 포인터 기준으로 x2, y2이 저장됩니다.\n'+
                                 '  <A>를 누를 시 <Q>와 <W>를 얻은 좌표를 리스트에 추가합니다.\n'+
-                                '  <E>를 누를 시 수를 예측합니다.\n\n'+
+                                '  <E>를 누를 시 수를 예측합니다.\n'+
+                                '  <M>을 눌러 무료 새로고침 버튼의 좌표 저장하세요.\n'
+                                '  <N>을 눌러 생성기 프로그램의 빈 공간에 좌표를 저장하세요.\n\n'
                                 '[사용법]\n'+
                                 '  1. <Q>와 <W>를 눌러 사각형 좌표를 얻고 <A>를 눌러 리스트에 추가합니다.\n'+
                                 '  2. (1)을 반복해서 여러 좌표를 얻을 수 있습니다.\n'+
                                 '  3. <E>를 눌러 리스트에 저장된 좌표 쌍의 수만큼 캡처되고, 수를 예측합니다.\n'
-                                '  4. 예측된 수가 UI에 출력됩니다.'
-                                
-                                
+                                '  4. 예측된 수가 UI에 출력됩니다.\n\n'
+                                '[타이머 자동 사용법]\n'
+                                ' 진행 : 마우스를 M의 좌표 이동 후 클릭 -> 예측(E와 같은 기능) -> '+
+                                '마우스를 N의 좌표로 이동 후 클릭 -> 615초 후 이전 과정을 반복\n'
+                                ' 1. [사용법] (1), (2)을 수행합니다.\n'
+                                ' 2. N와 M의 좌표를 저장합니다.\n'
+                                ' 3. [자동시작] 버튼을 눌러 데이터 자동생성을 시작하세요. [멈춤] 버튼을 제공합니다.\n\n'
+                                '[자동 사용시 유의사항]\n'
+                                ' - 숫자 데이터를 추출할 프로그램과 생성기 프로그램을 항상 모니터위에 보이도록 배치 해야합니다.\n'
+                                ' - 두 프로그램이 서로 화면에 교차되더라도 마우스 N과 M 좌표는 서로 겹쳐지지 않게 배치 해야합니다.\n'
                                 )
     #btn_quit[나가기] 이벤트 함수    
     def quitFunction(self):
         self.close()
+        
     def setText(self, msg):
         self.lb_event.clear()
         self.lb_event.setText(msg)
@@ -233,46 +285,40 @@ class DigitCapture(QMainWindow):
         frame_top.setGeometry(0,0,450,150)
         frame_top.setFrameShape(QFrame.Box | QFrame.Plain)
     
-        # frame_bottom = QFrame(self)
-        # frame_bottom.setGeometry(0,100,800,150)
-        # frame_bottom.setFrameShape(QFrame.Box | QFrame.Plain)
-    
         main_layout=QVBoxLayout()
         layout_top = QVBoxLayout()
-        # layout_bottom = QVBoxLayout()
         
         # 버튼 및 라벨 설정
-        btn_processing = QPushButton('분할 및 전처리', self)
-        btn_predict = QPushButton('예측', self)
+        btn_start = QPushButton('자동시작', self)
+        btn_stop = QPushButton('멈춤', self)
         
         btn_guide = QPushButton('사용법', self)       
         btn_quit = QPushButton('나가기', self)
 
         # 각 위젯 위치와 크기 지정 
-        btn_processing.setGeometry(10, 10, 100, 30)
-        btn_predict.setGeometry(110, 10, 100 , 30)
-        self.lb_event.setGeometry(10, 70, 300, 25)
+        btn_start.setGeometry(10, 10, 100 , 30)
+        btn_stop.setGeometry(110, 10, 100, 30)
+        self.lb_event.setGeometry(10, 70, 410, 25)
         btn_guide.setGeometry(210, 10, 100, 30)
         btn_quit.setGeometry(310, 10, 100, 30)
                   
 
         #상단 프레임 레이아웃 위젯 추가
-        layout_top.addWidget(btn_processing)
-        layout_top.addWidget(btn_predict)
+        layout_top.addWidget(btn_start)
+        layout_top.addWidget(btn_stop)
         layout_top.addWidget(btn_guide)
         layout_top.addWidget(btn_quit)
         
         # 메인 레이아웃에 모든 프레임을 추가
         main_layout.addWidget(frame_top)
-        # main_layout.addWidget(frame_bottom)
         
         # 각 버튼에 콜백함수 연결
-        btn_processing.clicked.connect(self.processingFunction)
-        btn_predict.clicked.connect(self.predictFunction)
+        btn_start.clicked.connect(self.threadFunction)
+        btn_stop.clicked.connect(self.threadFunction)
         btn_guide.clicked.connect(self.showGuideFunction)
         btn_quit.clicked.connect(self.quitFunction)
         
-    
+        
 app = QApplication(sys.argv)
 win = DigitCapture()
 win.show()
