@@ -131,7 +131,8 @@ class Imageprocessor:
 
     # 위 과정들을 순서대로 수행
     # 매개변수 삭제할 것
-    def preprocessing(self, img, tmp_DateName, i):
+    def preprocessing(self, img):
+        # , tmp_DateName, i):
     
         gray= self.resize(img)
         bin_img = self.binary_img(gray)
@@ -139,8 +140,8 @@ class Imageprocessor:
         mop_img = self.morphology(cleaned_img)
         
         #삭제할 것
-        tmp_path='./3_CaptureSample/2022-07-05/'+tmp_DateName+'/prcd_'+tmp_DateName+'['+str(i)+'].jpg'
-        plt.imsave(tmp_path,mop_img,cmap="gray")
+        # tmp_path='./3_CaptureSample/2022-07-05/'+tmp_DateName+'/prcd_'+tmp_DateName+'['+str(i)+'].jpg'
+        # plt.imsave(tmp_path,mop_img,cmap="gray")
         
         n = self.ImgSize
         img = mop_img.reshape(n, n, 1)

@@ -78,7 +78,7 @@ class DigitCapture(QMainWindow):
         self.lb_event = QLabel('사용법을 확인하세요!',self)
         self.setUI()
         
-        self.cnn=load_model('./0_models/cnn_v5.h5')
+        self.cnn=load_model('./0_models/cnn_v5_1.h5')
         self.ext='.jpg'
         # 임시 변수, 삭제할 예정
         self.tmp_imgpath='./3_CaptureSample/2022-07-05/'

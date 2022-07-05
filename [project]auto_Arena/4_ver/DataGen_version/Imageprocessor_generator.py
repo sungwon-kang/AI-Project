@@ -13,7 +13,7 @@ class Imageprocessor:
     
     Data_type='float32'
     ImgSize=28
-    show_flag=True
+    show_flag=False
     def __init__(self):
         # 모폴로지 구조
         self.se = np.uint8([[0, 1, 0],
@@ -139,7 +139,7 @@ class Imageprocessor:
         mop_img = self.morphology(cleaned_img)
         
         #삭제할 것
-        tmp_path='./3_CaptureSample/2022-07-04/'+tmp_DateName+'/prcd_'+tmp_DateName+'['+str(i)+'].jpg'
+        tmp_path='./3_CaptureSample/2022-07-05/'+tmp_DateName+'/prcd_'+tmp_DateName+'['+str(i)+'].jpg'
         plt.imsave(tmp_path,mop_img,cmap="gray")
         
         n = self.ImgSize
