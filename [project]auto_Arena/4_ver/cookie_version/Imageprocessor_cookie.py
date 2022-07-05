@@ -164,4 +164,3 @@ class Imageprocessor:
         # 응답없음 방지
         time.sleep(0.3)
         return np.array(imgs,dtype=self.Data_type)
-        
