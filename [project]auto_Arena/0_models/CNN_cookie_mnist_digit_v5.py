@@ -3,6 +3,7 @@ import tensorflow as tf
 import Imageprocessor as ip
 import tensorflow.keras.datasets as ds
 
+from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Conv2D,MaxPooling2D,Flatten,Dense,Dropout
 from tensorflow.keras.optimizers import Adam
@@ -30,19 +31,20 @@ x_test_cookie=IP.load_imgs('2_valSample', False)
 y_train_cookie=np.array([0,1,2,3,4,5,6,7,8,9,0])
 y_test_cookie=np.array([0,1,2,3,4,5,6,7,8,9,0,0])
 #%%
-Date='./3_captureSample/2022-06-'
-day=['29']
-
+folder='./3_captureSample/'
+year='2022'
+mon_day=['06-27','06-28','06-29','07-03','07-04','07-05']
+#%%
 n=1
-for d in day:
-    subpath = '{}{}'.format(Date, d)
-    print(subpath)
+for date in mon_day:
+    path = '{}{}-{}'.format(folder, year, date)
+    print(path)
     
-    for folder in os.listdir(subpath+'/'):
-        path = subpath + '/' + folder
-        print(path)
-        if folder == "labels.txt":
-            f = open(path,'r')
+    for Files in os.listdir(path+'/'):
+        FilePath = path + '/' + Files
+        print(FilePath)
+        if Files == "labels.txt":
+            f = open(FilePath,'r')
             
             lines = f.readlines()
             y=[]
@@ -52,17 +54,32 @@ for d in day:
                     y.append(int(line[-1:]))
                     
             # print(y)
-            y_test_cookie=np.concatenate([y_test_cookie, np.array(y)])   
+            y_train_cookie=np.concatenate([y_train_cookie, np.array(y)])
+            print("레이블 불러오기 끝")
                     
         else:
-            x_test_cookie=np.concatenate([x_test_cookie, IP.load_imgs(path)])
+            x_train_cookie=np.concatenate([x_train_cookie, IP.load_imgs(FilePath)])
             print(str(n)+"번째 폴더 작업 끝")
             n+=1
+    n=0
 
-# print(y_test_cookie)
+#%%
 print(x_test_cookie.shape)  
-# print(y_test_cookie)
-print(y_test_cookie.shape)    
+print(y_test_cookie.shape)
+print(x_train_cookie.shape)
+print(y_train_cookie.shape)    
+#%%
+#훈련 집합과 테스트 집합을 6:4 비율로 나누어서
+#훈련 집합과 레이블은 x, 테스트 집합과 레이블은 y에 저장한다.
+tmp_x_train_cookie, tmp_x_test_cookie, tmp_y_train_cookie, tmp_y_test_cookie=train_test_split(x_train_cookie,
+                                                                                           y_train_cookie,
+                                                                                           train_size=0.6)
+x_train_cookie=tmp_x_train_cookie.copy()
+y_train_cookie=tmp_y_train_cookie.copy()
+
+x_test_cookie=tmp_x_test_cookie.copy()
+y_test_cookie=tmp_y_test_cookie.copy()
+
 #%%
 # 부류를 원핫코드로 변환
 y_train_mnist=tf.keras.utils.to_categorical(y_train_mnist,10)
@@ -111,13 +128,13 @@ cnn.compile(loss='categorical_crossentropy',optimizer=Adam(learning_rate=0.001),
 
 es = EarlyStopping(monitor='loss', mode='min', verbose=1, patience=25)
 
-generator=ImageDataGenerator(width_shift_range=0.5,height_shift_range=0.5,rescale=0.4)
-hist = cnn.fit(generator.flow(x_train, y_train, batch_size=128), epochs=50, validation_data=(x_test, y_test), 
+generator=ImageDataGenerator(width_shift_range=0.2)
+hist = cnn.fit(generator.flow(x_train, y_train, batch_size=256), epochs=20, validation_data=(x_test, y_test), 
                callbacks=[es], verbose=1)
     
 #%%
 # 학습된 모델 저장
-cnn.save('cnn_v4.h5')
+cnn.save('cnn_v5_1.h5')
 print(cnn.summary())
 #%%
 # 신경망 모델 정확률 평가
@@ -125,13 +142,13 @@ res=cnn.evaluate(x_test,y_test,verbose=0)
 print("정확률은",res[1]*100)
 #%%
 # 혼동 행렬 구함 ( 예측 i , 실제 j )
-cnn=load_model('./0_models/cnn_v5.h5')
+cnn=load_model('./0_models/cnn_v5_1.h5')
 
 conf=np.zeros((10,10))          #10x10 0으로 채운 행렬 생
-res=cnn.predict(x_test_cookie)
+res=cnn.predict(tmp_x_test_cookie)
 
 for i in range(len(res)):       	#예측한 값이 들어간 res의 길이만큼 반복
-    conf[np.argmax(res[i])][y_test_cookie[i]]+=1 	 #res[i]측정한 값, y_test[i]실제 값 위치에 +1
+    conf[np.argmax(res[i])][tmp_y_test_cookie[i]]+=1 	 #res[i]측정한 값, y_test[i]실제 값 위치에 +1
     
 print(conf)		# 출력, 대각선 부분이 예측과 실제값이 일치한 부분이다.
 
