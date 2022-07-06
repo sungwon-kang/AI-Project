@@ -71,18 +71,18 @@ class DigitCapture(QMainWindow):
     def __init__(self):
         # 메인 윈도우 창 크기와 타이틀 지정
         super().__init__()
-        self.setWindowTitle('Auto Arena ver0.1')
+        self.setWindowTitle('Auto Arena Generator')
         self.setGeometry(200, 200, 420, 100)
         self.setFixedSize(420, 100)
         
         self.lb_event = QLabel('사용법을 확인하세요!',self)
         self.setUI()
         
-        self.cnn=load_model('./0_models/cnn_v5.h5')
+        self.cnn=load_model('./0_models/cnn_v5_1.h5')
         self.ext='.jpg'
         # 임시 변수, 삭제할 예정
-        self.tmp_imgpath='./3_CaptureSample/2022-07-04/'
-        self.tmp_savepath='./3_CaptureSample/2022-07-04/'       
+        self.tmp_imgpath='./3_CaptureSample/2022-07-05/'
+        self.tmp_savepath='./3_CaptureSample/2022-07-05/'       
         
         self.timer=QTimer()
         self.timer.timeout.connect(self.autoCaptureFunction)
@@ -111,13 +111,13 @@ class DigitCapture(QMainWindow):
                 self.gui_x, self.gui_y = pyautogui.position()
                 
                 print("프로그램 클릭 위치 값 ({}, {})\n".format(self.gui_x, self.gui_y))
-                self.setText("프로그램 클릭 값 ({}, {})\n".format(self.gui_x, self.gui_y))
+                self.setText("프로그램 위치 ({}, {})\n".format(self.gui_x, self.gui_y))
                 
             elif key == Qt.Key_M:
                 self.refresh_x, self.refresh_y = pyautogui.position()
                 
                 print("새로고침 위치 값 ({}, {})\n".format(self.refresh_x, self.refresh_y))
-                self.setText("새로고침 위치 값 ({}, {})\n".format(self.refresh_x, self.refresh_y))
+                self.setText("새로고침 위치 ({}, {})\n".format(self.refresh_x, self.refresh_y))
             elif key == Qt.Key_A: 
                 self.saved_p1_cord.append((self.x1,self.y1))
                 self.saved_p2_cord.append((self.x2,self.y2))
