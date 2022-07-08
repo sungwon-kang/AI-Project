@@ -12,7 +12,7 @@ import time
 class Imageprocessor:
     
     ImgSize=28
-    show_flag=True
+    show_flag=False
     Data_type='float32'
     def __init__(self):
         # 모폴로지 구조

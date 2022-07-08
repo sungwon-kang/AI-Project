@@ -3,7 +3,7 @@ import numpy as np
 
 import pyautogui    # mouse, keyboard 관련 도구함 끌어오기
 import pyperclip    # 클립보드에 저장 혹은 클립보드에서 불러오기 위함
-import Imageprocessor as ip
+import Imageprocessor_cookie as ip
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
@@ -52,7 +52,7 @@ class DigitCapture(QMainWindow):
         self.setUI()
         
         # 학습 모델 불러오기
-        self.cnn=load_model('./0_models/cnn_v5.h5')
+        self.cnn=load_model('./0_models/cnn_v5_1.h5')
         
     # 키 이벤트 캡처 기능
     def keyPressEvent(self, e):
@@ -146,7 +146,7 @@ class DigitCapture(QMainWindow):
         self.le_crop_n.setText('7')
         self.le_fx1.setText('0')
         self.le_fx2.setText('0')
-    
+
     def processingFunction(self):
         # 분할 함수 호출
         dvi, n, fx1, fx2=self.getParameterTopLine()
