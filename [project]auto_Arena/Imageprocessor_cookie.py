@@ -46,33 +46,38 @@ class Imageprocessor:
             plt.imshow(img, cmap='gray'), plt.xticks([]), plt.yticks([])
             plt.show()
         
-    def crop(self, cv_img, cut, crop_n, crop_fx1, crop_fx2, y2=28):
+    def crop(self, lst_cvimgs, cut, crop_n, crop_fx1, crop_fx2, y2=28):
         
         c=cut                   # 원본 이미지 절단 
         n=crop_n                # 생성할 분할 이미지 수 (1/n)
         fx1=crop_fx1            # 분할 조절
         fx2=crop_fx2
-       
-        # OpenCV -> PIL
-        img = self.CVtoPIL(cv_img)
         
-        #이미지의 크기 출력
-        width, height = img.size
-        print('이미지 크기 (w, h):', width, height)
-        width=width/c
+        
+        listofImgs=[]
+        for i in range(len(lst_cvimgs)):
+            # OpenCV -> PIL
+            img = self.CVtoPIL(lst_cvimgs[i])
+            
+            #이미지의 크기 출력
+            width, height = img.size
+            print('이미지 크기 (w, h):', width, height)
+            width=width/c
 
-        # 이미지 자르기 crop함수 이용 ex. crop(left, up, rigth, down)
-        croppedImgs=[]
-        wn =  width/n
-        for i in range (n):
-            x1 = wn*i+fx1
-            x2 = wn*(i+1)+fx2
+            # 이미지 자르기 crop함수 이용 ex. crop(left, up, rigth, down)
+            wn =  width/n
+            croppedImgs=[]
+            for i in range (n):
+                x1 = wn*i+fx1
+                x2 = wn*(i+1)+fx2
+                
+                croppedImage=img.crop(( x1, 0, x2, y2))
+                print("잘려진 사진 크기 :",croppedImage.size)    
+                croppedImgs.append(croppedImage)
             
-            croppedImage=img.crop(( x1, 0, x2, y2))
-            print("잘려진 사진 크기 :",croppedImage.size)    
-            croppedImgs.append(croppedImage)
+            listofImgs.append(croppedImgs)
             
-        return croppedImgs
+        return listofImgs
     
     def resize(self, gray):
         n=self.ImgSize

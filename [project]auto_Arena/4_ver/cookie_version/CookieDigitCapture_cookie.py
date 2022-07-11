@@ -15,27 +15,32 @@ IP = ip.Imageprocessor()
 #%%
 class DigitCapture(QMainWindow):
     
-    # P1 좌표 변수
+    # 좌표 변수
     x1=0
-    x2=0
-    
-    # P2 좌표 변수
     y1=0
+
+    x2=0
     y2=0
+
+    x3=0
+    y3=0
+    
+    x4=0
+    y4=0
     
     # 탐색할 전투력 최대값
-    Max=0
+    # Max=0
     
-    # P1, P2 각각 쌍으로 저장하는 리스트
+    # 전투력 P1, P2 좌표 저장 리스트
     saved_p1_cord=[]
     saved_p2_cord=[]
     
+    # 트로피 P3, P4 좌표 저장 리스트
+    saved_p3_cord=[]
+    saved_p4_cord=[]
+    
     # 키 이벤트 락
     keyFlag=True
-    
-    captured_img=None       # 캡쳐 이미지 객체
-    proceed_imgs=[]         # 분할된 이미지를 전처리된 이미지를 저장하는 이미지 리스트
-    predicted_list=[]       # 예측된 수들을 저장하는 리스트
     
     WindowWidth=600
     WindowHeight=450
@@ -57,8 +62,8 @@ class DigitCapture(QMainWindow):
     # 키 이벤트 캡처 기능
     def keyPressEvent(self, e):
         # 키 입력 제한 리스트
-        printable=[Qt.Key_Q, Qt.Key_W, Qt.Key_A, 
-                   Qt.Key_E, Qt.Key_C, Qt.Key_X]
+        printable=[Qt.Key_Q, Qt.Key_W, Qt.Key_R, Qt.Key_T, 
+                   Qt.Key_A, Qt.Key_E, Qt.Key_C, Qt.Key_X]
         
         # 입력 키 가져오기
         key=e.key()
@@ -76,175 +81,218 @@ class DigitCapture(QMainWindow):
                 
                 print("위치 값 ({}, {})\n".format(self.x2,self.y2))
                 self.setText("위치 입력 (x2, y2) ({}, {})".format(self.x2,self.y2))
+            
+            elif key == Qt.Key_R:
+                self.x3, self.y3 = pyautogui.position()
+                
+                print("위치 값 ({}, {})\n".format(self.x3,self.y3))
+                self.setText("위치 입력 (x3, y3) ({}, {})".format(self.x3,self.y3))
+                
+            elif key == Qt.Key_T:
+                self.x4, self.y4 = pyautogui.position()
+                
+                print("위치 값 ({}, {})\n".format(self.x4,self.y4))
+                self.setText("위치 입력 (x4, y4) ({}, {})".format(self.x4,self.y4))
+            
                 
             elif key == Qt.Key_A: 
                 # 저장된 좌표 P1, P2 리스트에 추가
                 self.saved_p1_cord.append((self.x1,self.y1))
                 self.saved_p2_cord.append((self.x2,self.y2))
+                self.saved_p3_cord.append((self.x3,self.y3))
+                self.saved_p4_cord.append((self.x4,self.y4))
                 
-                print(self.saved_p1_cord)
-                print(self.saved_p2_cord)
+                print('p1 list: ', self.saved_p1_cord)
+                print('p2 list: ', self.saved_p2_cord)
+                print('p3 list: ', self.saved_p3_cord)
+                print('p4 list: ', self.saved_p4_cord)
+                
                 self.setText("리스트 추가됨 \np1 - "+str(self.saved_p1_cord) +"\np2 - "+ str(self.saved_p2_cord))
+                self.te_event.append("\np3 - "+str(self.saved_p3_cord) +"\np4 - "+ str(self.saved_p4_cord))
             
             elif key == Qt.Key_C:
                 # 좌표 리스트 초기화
                 self.saved_p1_cord.clear()
                 self.saved_p2_cord.clear()
+                self.saved_p3_cord.clear()
+                self.saved_p4_cord.clear()
+                
                 print("list clear")
                 self.setText("리스트 초기화됨")
                 
             elif key == Qt.Key_E:
-                self.CaptureFunction()
+                self.run()
                 
             elif key == Qt.Key_X:
                 self.quitFunction()
-                    
-    def CaptureFunction(self):
-        # 모니터 스크린샷 가져오기
-        l1=len(self.saved_p1_cord)
-        l2=len(self.saved_p2_cord)       
-        if( ( l1>0 and l2 > 0) and (l1 == l2) ):
-            n = len(self.saved_p1_cord)
-            self.keyFlag=False
+                
+    def run(self):
+        self.keyFlag=False
+        
+        # 캡쳐
+        powerImgs=self.CaptureFunction(self.saved_p1_cord, self.saved_p2_cord)
+        throphyImgs=self.CaptureFunction(self.saved_p3_cord, self.saved_p4_cord)
+        
+        # 분할
+        cut, powerDigit, throphyDigit, fx1, fx2 = self.getParameterTopLine()
+        # 리스트가 아닌 각 이미지를 전달해야함.
+        # 리스트로 전달하게 만들기
+        cropped_powerImgs=IP.crop(lst_cvimgs=powerImgs, cut=cut, crop_n=powerDigit, crop_fx1=fx1, crop_fx2=fx2)
+        cropped_trophyImgs=IP.crop(lst_cvimgs=throphyImgs, cut=cut, crop_n=throphyDigit, crop_fx1=fx1, crop_fx2=fx2)
+        
+        # 전처리
+        proceed_powerImgs=self.processImgs(cropped_powerImgs)
+        proceed_trophyImgs=self.processImgs(cropped_trophyImgs)
+        
+        # 예측
+        powerNums=self.predictFunction(proceed_powerImgs)
+        throphyNums=self.predictFunction(proceed_trophyImgs)
+        
+        
+        self.setText(powerNums)
+        self.append(throphyNums)
+        self.keyFlag=True
+        
+    def CaptureFunction(self, l1, l2):
+        # 스크린샷 좌표 가져오기 
+        p1=len(l1)
+        p2=len(l2)
+        
+        isSame = (p1==p2)
+       
+        if( isSame == True and l1!=0 ):
+            n = len(l1)
             
             # 추가된 좌표 쌍 갯수 만큼 반복
+            captured_imgs=[]
             for i in range(n):
-                (x1,y1)=self.saved_p1_cord[i]
-                (x2,y2)=self.saved_p2_cord[i]
-                print("두 위치 ({}, {}), ({}, {})".format(x1,y1,x2,y2))
+                (x1,y1)=l1[i]
+                (x2,y2)=l2[i]
+                print("전투력 위치 ({}, {}), ({}, {})".format(x1,y1,x2,y2))
                 
-                # 좌표 정렬 후 차이를 구하여 너비와 높이를 계산
-                sorted_x_value = sorted([x1, x2])
-                sorted_y_value = sorted([y1, y2])
-                width = sorted_x_value[1] - sorted_x_value[0]
-                height = sorted_y_value[1] - sorted_y_value[0]
+                X, Y, Width, Height = self.getCaptureCoord(x1,x2,y1,y2)
+                print("영역 : ({}, {}, {}, {})\n".format(X, Y, Width, Height))
                 
-                x_re = sorted_x_value[0] - 20
-                y_re = sorted_y_value[0] - 20
-                width_re = width + 40
-                height_re = height + 40
-                                         
-                print("영역 : ({}, {}, {}, {})\n".format(x_re, y_re, width_re, height_re))
-                pyperclip.copy("({}, {}, {}, {})".format(x_re, y_re, width_re, height_re))
-        
-                if 'x_re' in locals(): # 메모리 변수 속에 있는 것을 불러오기.
-                    self.captured_img=pyautogui.screenshot(region=(sorted_x_value[0], sorted_y_value[0], width, height))
-                    print("좌표대로 이미지 저장")
-                    
-                    # 전처리 함수 호출
-                    self.processingFunction()
+                captured_imgs.append(pyautogui.screenshot(region=(X, Y, Width, Height)))
             
-            self.te_event.append("예측된 수: "+str(self.predicted_list))
-            self.te_event.append("\n나보다 낮은 전투력들: "+str(self.findInList(self.predicted_list)))
-            self.predicted_list.clear()
-            
-            # 끝나고 key 락 풀기
-            self.keyFlag=True
-            
-    def resetFunction(self):
-        self.le_cut.setText('1')
-        self.le_crop_n.setText('7')
-        self.le_fx1.setText('0')
-        self.le_fx2.setText('0')
-
-    def processingFunction(self):
-        # 분할 함수 호출
-        dvi, n, fx1, fx2=self.getParameterTopLine()
-        cropped_imgs=IP.crop(cv_img=self.captured_img, cut=dvi, crop_n=n, crop_fx1=fx1, crop_fx2=fx2)
-        print("이미지 분할 완료")
+            return captured_imgs
         
-        # 각 분할된 이미지들을 전처리
-        for crop_img in cropped_imgs:
-            img = IP.preprocessing(crop_img)
-            self.proceed_imgs.append(img)
-        print("이미지 전처리 완료")
         
-        # 예측 함수
-        self.predictFunction()
+    def predictFunction(self, lst_imgs):
         
-    def predictFunction(self):
-        
-        if len(self.proceed_imgs)==0:
+        if len(lst_imgs)==0:
             self.setText("등록된 이미지가 없습니다.")
-        else:    
-            self.Max = self.getParameterMiddleLine()
+        else:
+            # 이미 전처리된 이미지를 파라미터로 받는다.
             # 처리된 이미지들을 모델 입력 데이터 형태로 변환
-            proceed_imgs=IP.listToArray(self.proceed_imgs,'float32')
-            res=self.cnn.predict(proceed_imgs)           
-            
-            # 각 자릿수를 계산
-            pred_num=0
-            n_digit = len(res)-1
-            for digit in res:
-                # 예측된 확률 중 가장 큰 인덱스를 가져옴
-                predicted_num=np.argmax(digit)
-                
-                # 자릿수 연결
-                pred_num+=predicted_num*(10**n_digit)
-                n_digit=n_digit-1
-                
-                # 예측된 각 수를 출력
-                print(predicted_num)
-            
-            # 예측된 수 추가
-            self.setText("[예측결과]")
-            self.predicted_list.append(pred_num)            
-            print("예측 값:", pred_num)
-            
-            self.proceed_imgs.clear()
-            
+            for imgs in lst_imgs:
+                predNumList=[]
+                arr_imgs=IP.listToArray(imgs,'float32')
+                res=self.cnn.predict(arr_imgs)
+                result=self.getNumber(res)
+                print("예측 값:", result)
+                    
+                predNumList.append(result)
+                    
+            return predNumList
         
-        # 여기까지가 하나 이미지에 대한 예측 끝
-        # 작업할 좌표 리스트이 남아있다면 103번 줄로 재진행
+    def getNumber(self, predNums):
+        # 각 자릿수를 계산
+        result=0
+        digit = len(predNums)-1
+        for NUM in predNums:
+            # 예측된 확률 중 가장 큰 인덱스를 가져옴
+            Output=np.argmax(NUM)
+            # 예측된 각 수를 출력
+            print(Output)
+            # 자릿수 연결
+            result+=Output*(10**digit)
+            digit=digit-1
+        return result
+    
     # btn_guide(사용법) 이벤트 함수
     def showGuideFunction(self):
         QMessageBox.information(self, '사용법', 
                                 '[단축키]\n'+
                                 '  <Q>를 누를 시 마우스 포인터 기준으로 x1, y1이 저장됩니다.\n'+
                                 '  <W>를 누를 시 마우스 포인터 기준으로 x2, y2이 저장됩니다.\n'+
-                                '  <A>를 누를 시 <Q>와 <W>를 얻은 좌표를 리스트에 추가합니다.\n'+
-                                '  <E>를 누를 시 수를 예측합니다.\n'+
+                                '  <R>를 누를 시 마우스 포인터 기준으로 x3, y3이 저장됩니다.\n'+
+                                '  <T>를 누를 시 마우스 포인터 기준으로 x4, y4이 저장됩니다.\n'+
+                                '  <A>를 누를 시 단축키로 설정한 모든 좌표를 리스트에 추가합니다.\n'+
+                                '  <P>를 누를 시 수를 예측합니다.\n'+
                                 '  <X>를 누를 시 프로그램이 종료됩니다.\n\n'+
                                 
                                 '[사용법]\n'+
-                                '  1. <Q>와 <W>를 눌러 사각형 좌표를 얻고 <A>를 눌러 리스트에 추가합니다.\n'+
+                                '  1. <Q>와 <W>, <R>와 <T>를 눌러 사각형 좌표를 얻고 <A>를 눌러 리스트에 추가합니다.\n'+
                                 '  2. (1)을 반복해서 여러 좌표를 얻을 수 있습니다.\n'+
-                                '  3. <E> 또는 [시작] 버튼을 눌러 리스트에 저장된 좌표 쌍의 수만큼 캡쳐되고, \t\t수를 예측합니다.\n'
+                                '  3. <E> 또는 [시작] 버튼을 눌러 리스트에 저장된 좌표 쌍의 수만큼 캡쳐되고, 수를 예측합니다.\n'
                                 '  4. 예측된 수가 UI에 출력됩니다.\n\n'
                                 
                                 '[설정]\n'+
-                                ' 캡쳐 이미지 절단: 캡쳐 이미지를 얻어올 때, \n\t\t이미지를 1/n하여 얻어오는 설정값 (기본값 :1)\n'
-                                ' 분할 이미지 왼쪽 너비 조절: 각 분할 이미지의 \n\t좌변 너비 크기 설정값 (기본값 :0)\n'
-                                ' 분할 이미지 오른쪽 너비 조절: 각 분할 이미지의 \n\t우변 너비 크기 설정값 (기본값 :0)\n'
-                                ' 분할 수: 캡쳐 이미지 분할 수 설정값 (기본값 :7)\n'
+                                ' 캡쳐 이미지 절단: 캡쳐 이미지를 얻어올 때, 이미지를 1/n 자르는 설정값\n(기본값 :1)\n'
+                                ' 분할 이미지 왼쪽 너비 조절: 각 분할 이미지의 좌변 너비 크기 설정값\n(기본값 :0)\n'
+                                ' 분할 이미지 오른쪽 너비 조절: 각 분할 이미지의 우변 너비 크기 설정값\n(기본값 :0)\n'
+                                ' 분할 수: 캡쳐 이미지 분할 수 설정값\n(기본값 :7)\n'
                                 )
+    def processImgs(self, lst_imgs):
+        listofImgs=[]
+        for imgs in lst_imgs:
+            proceed_imgs=[]
+            for img in imgs:
+                procced_img = IP.preprocessing(img)
+                proceed_imgs.append(procced_img)
+            
+            listofImgs.append(proceed_imgs)
+        return listofImgs
     
+    def resetFunction(self):
+        self.le_cut.setText('1')
+        self.le_cropPower_n.setText('7')
+        self.le_cropthrophy_n.setText('4')
+        self.le_fx1.setText('0')
+        self.le_fx2.setText('0')
+        
     # btn_quit[나가기] 이벤트 함수    
     def quitFunction(self):
         self.close()
     
-    def findInList(self, lst):
-        lst = [i for i in lst if i <= self.Max]
-        return lst
+    def printInList(self):
+        # 
+        # Max, throphy = self.getParameterMiddleLine()
+        # lst = [i for i in lst if i <= self.Max]
+        self.te_event.append("예측된 수: "+str(self.predicted_list))
+        self.te_event.append("\n나보다 낮은 전투력들: "+str(self.findInList(self.predicted_list)))
+        
+    def getCaptureCoord(self, x1, x2, y1,y2):
+        # 좌표 정렬 후 차이를 구하여 너비와 높이를 계산
+        sorted_X_value = sorted([x1, x2])
+        sorted_Y_value = sorted([y1, y2])
+        Width = sorted_X_value[1] - sorted_X_value[0]
+        Height = sorted_Y_value[1] - sorted_Y_value[0]
+                
+        return sorted_X_value[0], sorted_Y_value[0], Width, Height
     
     def getParameterTopLine(self):
         cut = int(self.le_cut.text())
-        crop_n = int(self.le_crop_n.text())
+        powerDigit = int(self.le_cropPower_n.text())
+        throphyDigit = int(self.le_cropthrophy_n.text())
         crop_fx1 = int(self.le_fx1.text())
         crop_fx2 = int(self.le_fx2.text())
         
-        return cut, crop_n, crop_fx1, crop_fx2
+        return cut, powerDigit, throphyDigit, crop_fx1, crop_fx2
     
     def getParameterMiddleLine(self):
-        # myPower = int(self.le_myPower.text())
+        throphy = int(self.le_EnemyMaxtrophy.text())
         Max = int(self.le_EnemyMaxPower.text())
         
-        return Max
-    
-        self.close
+        return Max, throphy
+
     def setText(self, msg):
         self.te_event.clear()
         self.te_event.setText(msg)
+        
+    def append(self, msg):
+        self.te_event.append(msg)
         
     def setUI(self):
         # 프레임과 레이아웃 선언
@@ -275,11 +323,17 @@ class DigitCapture(QMainWindow):
         
         self.le_cut.setAlignment(Qt.AlignCenter)
         
-        lb_crop_n = QLabel('분할 수', self)
-        self.le_crop_n = QLineEdit(self)
-        self.le_crop_n.setValidator(QIntValidator(self))
-        self.le_crop_n.setPlaceholderText("7")
-        self.le_crop_n.setAlignment(Qt.AlignCenter)
+        lb_cropPower_n = QLabel('전투력 분할 수', self)
+        self.le_cropPower_n = QLineEdit(self)
+        self.le_cropPower_n.setValidator(QIntValidator(self))
+        self.le_cropPower_n.setPlaceholderText("7")
+        self.le_cropPower_n.setAlignment(Qt.AlignCenter)
+        
+        lb_cropthrophy_n = QLabel('트로피 분할 수', self)
+        self.le_cropthrophy_n = QLineEdit(self)
+        self.le_cropthrophy_n.setValidator(QIntValidator(self))
+        self.le_cropthrophy_n.setPlaceholderText("4")
+        self.le_cropthrophy_n.setAlignment(Qt.AlignCenter)
         
         lb_fx1 = QLabel('분할 이미지 왼쪽 너비 간격', self)
         self.le_fx1 = QLineEdit(self)
@@ -299,8 +353,11 @@ class DigitCapture(QMainWindow):
         lb_cut.setGeometry(10,35,130,25)
         self.le_cut.setGeometry(10, 60, 130, 25)
         
-        lb_crop_n.setGeometry(175, 35, 130, 25)
-        self.le_crop_n.setGeometry(175, 60, 130, 25)
+        lb_cropPower_n.setGeometry(175, 35, 130, 25)
+        self.le_cropPower_n.setGeometry(175, 60, 130, 25)
+        
+        lb_cropthrophy_n.setGeometry(335, 35, 130, 25)
+        self.le_cropthrophy_n.setGeometry(335, 60, 130, 25)
         
         lb_fx1.setGeometry(10, 85, 180, 25)
         self.le_fx1.setGeometry(10, 110, 130, 25)
@@ -309,8 +366,14 @@ class DigitCapture(QMainWindow):
         self.le_fx2.setGeometry(175, 110, 130, 25)
         
         layout_top.addWidget(lb_top)
+        layout_top.addWidget(lb_cut)
+        layout_top.addWidget(lb_cropPower_n)
+        layout_top.addWidget(lb_cropthrophy_n)
+        layout_top.addWidget(lb_fx1)
+        layout_top.addWidget(lb_fx2)
         layout_top.addWidget(self.le_cut)
-        layout_top.addWidget(self.le_crop_n)
+        layout_top.addWidget(self.le_cropPower_n)
+        layout_top.addWidget(self.le_cropthrophy_n)
         layout_top.addWidget(self.le_fx1)
         layout_top.addWidget(self.le_fx2)
         
@@ -320,11 +383,11 @@ class DigitCapture(QMainWindow):
                              "font-size: 20px")
         lb_middle.setAlignment(Qt.AlignCenter)
         
-        lb_myPower = QLabel('내 전투력', self)
-        self.le_myPower = QLineEdit(self)
-        self.le_myPower.setValidator(QIntValidator(self))
-        self.le_myPower.setAlignment(Qt.AlignCenter)
-        self.le_myPower.setText('0')
+        lb_EnemyMaxtrophy = QLabel('탐색할 상대 트로피 최대치', self)
+        self.le_EnemyMaxtrophy = QLineEdit(self)
+        self.le_EnemyMaxtrophy.setValidator(QIntValidator(self))
+        self.le_EnemyMaxtrophy.setAlignment(Qt.AlignCenter)
+        self.le_EnemyMaxtrophy.setText('0')
         
         lb_EnemyMaxPower = QLabel('탐색할 상대 전투력 최대치', self)
         self.le_EnemyMaxPower = QLineEdit(self)
@@ -334,15 +397,15 @@ class DigitCapture(QMainWindow):
         
         lb_middle.setGeometry(0,149,self.WindowWidth, 30)
         
-        lb_myPower.setGeometry(10,185,130,25)
-        self.le_myPower.setGeometry(10,210,130,25)
+        lb_EnemyMaxtrophy.setGeometry(10,185,150,25)
+        self.le_EnemyMaxtrophy.setGeometry(10,210,130,25)
         
         lb_EnemyMaxPower.setGeometry(175,185,150,25)
         self.le_EnemyMaxPower.setGeometry(175,210,130,25)
 
         layout_top.addWidget(lb_middle)
         layout_middle.addWidget(lb_middle)
-        layout_middle.addWidget(self.le_myPower)
+        layout_middle.addWidget(self.le_EnemyMaxtrophy)
         layout_middle.addWidget(lb_EnemyMaxPower)
         layout_middle.addWidget(self.le_EnemyMaxPower)
 

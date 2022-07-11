@@ -137,8 +137,8 @@ class DigitCapture(QMainWindow):
         cut, powerDigit, throphyDigit, fx1, fx2 = self.getParameterTopLine()
         # 리스트가 아닌 각 이미지를 전달해야함.
         # 리스트로 전달하게 만들기
-        # cropped_powerImgs=IP.crop(cv_img=powerImgs, cut=cut, crop_n=powerDigit, crop_fx1=fx1, crop_fx2=fx2)
-        # cropped_trophyImgs=IP.crop(cv_img=throphyImgs, cut=cut, crop_n=throphyDigit, crop_fx1=fx1, crop_fx2=fx2)
+        cropped_powerImgs=IP.crop(lst_cvimgs=powerImgs, cut=cut, crop_n=powerDigit, crop_fx1=fx1, crop_fx2=fx2)
+        cropped_trophyImgs=IP.crop(lst_cvimgs=throphyImgs, cut=cut, crop_n=throphyDigit, crop_fx1=fx1, crop_fx2=fx2)
         
         # 전처리
         proceed_powerImgs=self.processImgs(cropped_powerImgs)
@@ -148,9 +148,9 @@ class DigitCapture(QMainWindow):
         powerNums=self.predictFunction(proceed_powerImgs)
         throphyNums=self.predictFunction(proceed_trophyImgs)
         
-        print(powerNums)
-        print(throphyNums)
         
+        self.setText(powerNums)
+        self.append(throphyNums)
         self.keyFlag=True
         
     def CaptureFunction(self, l1, l2):
@@ -159,6 +159,7 @@ class DigitCapture(QMainWindow):
         p2=len(l2)
         
         isSame = (p1==p2)
+       
         if( isSame == True and l1!=0 ):
             n = len(l1)
             
@@ -177,23 +178,22 @@ class DigitCapture(QMainWindow):
             return captured_imgs
         
         
-    def predictFunction(self, imglist):
+    def predictFunction(self, lst_imgs):
         
-        if len(imglist)==0:
+        if len(lst_imgs)==0:
             self.setText("등록된 이미지가 없습니다.")
         else:
             # 이미 전처리된 이미지를 파라미터로 받는다.
             # 처리된 이미지들을 모델 입력 데이터 형태로 변환
-            predNumList=[]
-            for i in range(len(imglist)):
-                proceed_imgs=IP.listToArray(imglist[i],'float32')
-            
-                res=self.cnn.predict(proceed_imgs)
-                
-                pred_num=getNumber(res)
-                print("예측 값:", pred_num)
-                
-                predNumList.append(pred_num)
+            for imgs in lst_imgs:
+                predNumList=[]
+                arr_imgs=IP.listToArray(imgs,'float32')
+                res=self.cnn.predict(arr_imgs)
+                result=self.getNumber(res)
+                print("예측 값:", result)
+                    
+                predNumList.append(result)
+                    
             return predNumList
         
     def getNumber(self, predNums):
@@ -201,12 +201,10 @@ class DigitCapture(QMainWindow):
         result=0
         digit = len(predNums)-1
         for NUM in predNums:
-            
             # 예측된 확률 중 가장 큰 인덱스를 가져옴
             Output=np.argmax(NUM)
             # 예측된 각 수를 출력
             print(Output)
-            
             # 자릿수 연결
             result+=Output*(10**digit)
             digit=digit-1
@@ -218,12 +216,14 @@ class DigitCapture(QMainWindow):
                                 '[단축키]\n'+
                                 '  <Q>를 누를 시 마우스 포인터 기준으로 x1, y1이 저장됩니다.\n'+
                                 '  <W>를 누를 시 마우스 포인터 기준으로 x2, y2이 저장됩니다.\n'+
-                                '  <A>를 누를 시 <Q>와 <W>를 얻은 좌표를 리스트에 추가합니다.\n'+
+                                '  <R>를 누를 시 마우스 포인터 기준으로 x3, y3이 저장됩니다.\n'+
+                                '  <T>를 누를 시 마우스 포인터 기준으로 x4, y4이 저장됩니다.\n'+
+                                '  <A>를 누를 시 단축키로 설정한 모든 좌표를 리스트에 추가합니다.\n'+
                                 '  <P>를 누를 시 수를 예측합니다.\n'+
                                 '  <X>를 누를 시 프로그램이 종료됩니다.\n\n'+
                                 
                                 '[사용법]\n'+
-                                '  1. <Q>와 <W>를 눌러 사각형 좌표를 얻고 <A>를 눌러 리스트에 추가합니다.\n'+
+                                '  1. <Q>와 <W>, <R>와 <T>를 눌러 사각형 좌표를 얻고 <A>를 눌러 리스트에 추가합니다.\n'+
                                 '  2. (1)을 반복해서 여러 좌표를 얻을 수 있습니다.\n'+
                                 '  3. <E> 또는 [시작] 버튼을 눌러 리스트에 저장된 좌표 쌍의 수만큼 캡쳐되고, 수를 예측합니다.\n'
                                 '  4. 예측된 수가 UI에 출력됩니다.\n\n'
@@ -234,14 +234,16 @@ class DigitCapture(QMainWindow):
                                 ' 분할 이미지 오른쪽 너비 조절: 각 분할 이미지의 우변 너비 크기 설정값\n(기본값 :0)\n'
                                 ' 분할 수: 캡쳐 이미지 분할 수 설정값\n(기본값 :7)\n'
                                 )
-    def processImgs(self, imgs):
-        proceed_imgs=[]
-        for i in range(len(imgs)):
-            img=imgs[i]
-            procced_img = IP.preprocessing(img)
-            proceed_imgs.append(procced_img)
+    def processImgs(self, lst_imgs):
+        listofImgs=[]
+        for imgs in lst_imgs:
+            proceed_imgs=[]
+            for img in imgs:
+                procced_img = IP.preprocessing(img)
+                proceed_imgs.append(procced_img)
             
-        return proceed_imgs
+            listofImgs.append(proceed_imgs)
+        return listofImgs
     
     def resetFunction(self):
         self.le_cut.setText('1')
@@ -288,6 +290,9 @@ class DigitCapture(QMainWindow):
     def setText(self, msg):
         self.te_event.clear()
         self.te_event.setText(msg)
+        
+    def append(self, msg):
+        self.te_event.append(msg)
         
     def setUI(self):
         # 프레임과 레이아웃 선언
