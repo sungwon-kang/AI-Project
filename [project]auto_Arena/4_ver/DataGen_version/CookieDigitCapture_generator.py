@@ -81,8 +81,8 @@ class DigitCapture(QMainWindow):
         self.cnn=load_model('./0_models/cnn_v5_1.h5')
         self.ext='.jpg'
         # 임시 변수, 삭제할 예정
-        self.tmp_imgpath='./3_CaptureSample/2022-07-05/'
-        self.tmp_savepath='./3_CaptureSample/2022-07-05/'       
+        self.tmp_imgpath='./3_CaptureSample/2022-07-06/'
+        self.tmp_savepath='./3_CaptureSample/2022-07-06/'       
         
         self.timer=QTimer()
         self.timer.timeout.connect(self.autoCaptureFunction)
